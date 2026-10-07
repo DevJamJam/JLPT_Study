@@ -33,29 +33,37 @@ for migration in sorted((ROOT / "supabase/migrations").glob("*.sql")):
     run(migration.read_text())
 run((ROOT / "tests/db/contracts.sql").read_text())
 
-# 별도 연결 둘을 경합시켜 실제 행 잠금과 일일 상한을 검사한다.
-first = subprocess.Popen(
-    ["psql", url, "-X", "-v", "ON_ERROR_STOP=1", "-At"],
-    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-)
-first.stdin.write((ROOT / "tests/db/concurrent-first.sql").read_text())
-first.stdin.close()
-# pg_sleep 시간을 추측해 시작하지 않는다. 잠금 보유 연결의 상태를 DB에서 확인한다.
-for _ in range(100):
-    if run("select count(*) from pg_stat_activity where application_name = 'jlpt_lock_test' and wait_event = 'PgSleep';") == "1":
-        break
-    if first.poll() is not None:
-        raise AssertionError(first.stderr.read())
-    time.sleep(0.05)
-else:
-    first.terminate()
-    raise AssertionError("동시 요청 테스트의 잠금 획득을 확인하지 못했습니다.")
-try:
-    run((ROOT / "tests/db/concurrent-second.sql").read_text(), expected="DAILY_LIMIT_EXCEEDED")
-    if first.wait(timeout=15) != 0:
-        raise AssertionError(first.stderr.read())
-finally:
-    if first.poll() is None:
-        first.terminate()
+run((ROOT / "tests/db/auth-contracts.sql").read_text())
+
+
+def check_race(first_file, second_file, expected_error):
+    """잠금 보유 상태를 확인한 뒤 두 번째 연결로 실제 경합을 만든다."""
+    first = subprocess.Popen(
+        ["psql", url, "-X", "-v", "ON_ERROR_STOP=1", "-At"],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    first.stdin.write((ROOT / first_file).read_text())
+    first.stdin.close()
+    try:
+        for _ in range(100):
+            if run("select count(*) from pg_stat_activity where application_name = 'jlpt_lock_test' and wait_event = 'PgSleep';") == "1":
+                break
+            if first.poll() is not None:
+                raise AssertionError(first.stderr.read())
+            time.sleep(0.05)
+        else:
+            raise AssertionError("동시 요청의 잠금 획득을 확인하지 못했습니다.")
+        run((ROOT / second_file).read_text(), expected=expected_error)
+        if first.wait(timeout=15) != 0:
+            raise AssertionError(first.stderr.read())
+    finally:
+        if first.poll() is None:
+            first.terminate()
+            first.wait(timeout=5)
+
+
+check_race("tests/db/concurrent-first.sql", "tests/db/concurrent-second.sql", "DAILY_LIMIT_EXCEEDED")
 assert run("select sum(minutes) from public.study_records where user_id = '00000000-0000-0000-0000-000000000003';") == "1440"
-print("PASS: PostgreSQL 스키마·권한·기록 계약·동시 저장 상한")
+check_race("tests/db/join-concurrent-first.sql", "tests/db/join-concurrent-second.sql", "GROUP_FULL")
+assert run("select count(*) from public.group_members where group_id = '40000000-0000-0000-0000-000000000001';") == "15"
+print("PASS: PostgreSQL 스키마·권한·기록 계약·동시 저장 상한·가입·세션·동시 가입 정원")
