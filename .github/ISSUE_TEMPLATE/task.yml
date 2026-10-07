@@ -1,0 +1,20 @@
+name: 작업
+description: 구현 목적과 범위를 정리합니다.
+title: "chore: "
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 목적
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 구현 범위와 예상 결과
+    validations:
+      required: true
+  - type: textarea
+    id: validation
+    attributes:
+      label: 검증 방법
