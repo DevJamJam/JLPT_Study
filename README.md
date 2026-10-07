@@ -4,7 +4,7 @@ JLPT를 준비하는 소규모 스터디를 위한 공부 기록 웹앱입니다
 
 ## 현재 진행 상태
 
-현재는 **공통 디자인·기록 검증·DB 저장 기반 구현 단계**입니다. /preview에서 가상 데이터로 홈·달력·스터디·내 기록·로그인·입력·설정을 검토할 수 있습니다. 실제 인증·저장·DB는 아직 연결하지 않았습니다.
+현재는 **공통 디자인·기록·가입/세션 서버 기반 구현 단계**입니다. /preview에서 가상 데이터로 홈·달력·스터디·내 기록·로그인·입력·설정을 검토할 수 있습니다. 실제 인증·저장·DB는 아직 연결하지 않았습니다.
 
 | 항목                         | 상태                                                 |
 | ---------------------------- | ---------------------------------------------------- |
@@ -57,7 +57,7 @@ HTML 파일은 내려받아 브라우저에서 열 수 있습니다. 시안의 �
 | 테스트           | Vitest / Playwright                 |
 | 배포             | Vercel                              |
 
-실제 패키지 버전은 프로젝트 생성 때 호환성을 확인하고 lockfile로 고정합니다. Next.js·React·TypeScript·ESLint·Prettier·React Icons·SweetAlert2·Playwright를 설치했습니다. TanStack Query·Supabase·Vitest는 해당 기능 단계에서 추가합니다.
+실제 패키지 버전은 프로젝트 생성 때 호환성을 확인하고 lockfile로 고정합니다. Next.js·React·TypeScript·ESLint·Prettier·React Icons·SweetAlert2·Playwright·server-only를 설치했습니다. TanStack Query·Supabase·Vitest는 해당 기능 단계에서 추가합니다.
 
 ## 폴더 구조
 
@@ -88,9 +88,13 @@ src/
     design-preview/
     study-record/
       validation.ts
+    auth/
+      validation.ts
   lib/
     notifications.ts
     seoul-date.ts
+  server/
+    auth/
   styles/
     tokens.css
     globals.css
@@ -161,11 +165,11 @@ npm run dev
 
 브라우저에서 http://localhost:3000/preview 를 엽니다. 디자인 검토용 가상 데이터이며 입력 내용을 실제로 저장하지 않습니다. `npm run check`는 포맷·린트·타입 검사, `npm run build`는 운영 빌드, `npm run format`은 소스 포맷 정리입니다. 기존 docs 문서는 포맷 자동 변경에서 제외합니다.
 
-기록 검증 단위 검사: `npm run test:unit`. 기존 Playwright 러너에서 브라우저 없이 날짜·입력·일일 합산 규칙 10개 테스트를 실행합니다. 화면과 API에 검증 함수를 연결하는 작업은 다음 단계입니다.
+기록 검증 단위 검사: `npm run test:unit`. 기존 Playwright 러너에서 브라우저 없이 날짜·입력·일일 합산 및 인증 기반 규칙 15개 테스트를 실행합니다. 화면과 API에 검증 함수를 연결하는 작업은 다음 단계입니다.
 
 브라우저 검사: `npx playwright install chromium` 후 `npm run test:e2e`. 검사 명령은 운영 빌드 서버를 자동으로 시작합니다. SE3·패드·PC는 Chromium 화면 크기 검사이며 실제 Safari 기기 검사가 아닙니다.
 
-DB 검사: PostgreSQL 16의 빈 `jlpt_test` DB와 `psql`·Python 3이 필요합니다. `JLPT_TEST_DATABASE_URL`을 로컬 테스트 DB에 설정한 뒤 `python3 scripts/test-db.py`를 실행합니다. 기존 테이블이 있으면 중단합니다. CI는 별도 PostgreSQL 컨테이너에서 스키마·권한·기록 계약·동시 저장을 검사합니다. 실제 Supabase 적용과 가입/인증/관리자 RPC는 다음 단계입니다.
+DB 검사: PostgreSQL 16의 빈 `jlpt_test` DB와 `psql`·Python 3이 필요합니다. `JLPT_TEST_DATABASE_URL`을 로컬 테스트 DB에 설정한 뒤 `python3 scripts/test-db.py`를 실행합니다. 기존 테이블이 있으면 중단합니다. CI는 별도 PostgreSQL 컨테이너에서 스키마·권한·기록 계약·동시 저장을 검사합니다. 가입·세션 RPC와 PIN 해시 기반은 구현했습니다. 실제 Supabase 적용·시도 제한·인증 API·PIN 변경/관리자 RPC는 다음 단계입니다.
 
 Supabase와 배포 비밀값은 채팅이나 Git에 저장하지 않습니다. 앱 구현 때 `.env.example`에는 이름만 제공하고 실제 값은 로컬·배포 환경변수로 설정합니다.
 
@@ -182,4 +186,4 @@ Supabase와 배포 비밀값은 채팅이나 Git에 저장하지 않습니다. �
 
 ## 현재 검증 범위
 
-포맷·린트·타입·운영 빌드와 Chromium 화면 검사를 수행합니다. 375×667, 820×1180, 1280×900에서 간격·중앙 정렬·공휴일 예시·팝업·입력 유지·설정 동선을 검증합니다. PostgreSQL 테스트 DB에서 스키마·권한·기록 저장 계약을 검사합니다. 실제 iPhone Safari·Supabase 연결·인증·기기 동기화는 미검증입니다. 공휴일 세 날짜는 디자인 예시이며 공식 API 데이터가 아닙니다.
+포맷·린트·타입·운영 빌드와 Chromium 화면 검사를 수행합니다. 375×667, 820×1180, 1280×900에서 간격·중앙 정렬·공휴일 예시·팝업·입력 유지·설정 동선을 검증합니다. PostgreSQL 테스트 DB에서 스키마·권한·기록 저장·가입/세션 계약과 동시 가입 정원을 검사합니다. 실제 iPhone Safari·Supabase 연결·인증·기기 동기화는 미검증입니다. 공휴일 세 날짜는 디자인 예시이며 공식 API 데이터가 아닙니다.
