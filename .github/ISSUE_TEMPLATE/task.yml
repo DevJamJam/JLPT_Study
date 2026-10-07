@@ -1,6 +1,6 @@
 name: 작업
 description: 구현 목적과 범위를 정리합니다.
-title: "chore: "
+title: 'chore: '
 body:
   - type: textarea
     id: purpose
