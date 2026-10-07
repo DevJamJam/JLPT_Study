@@ -1,5 +1,6 @@
 // 디자인 검토 전용 가상 데이터. 운영 데이터와 공휴일 API를 대체하지 않는다.
-export const TODAY = '2026-10-06';
+// 시안 기준일. 가상 기록 날짜와 분리하며 실제 앱의 서울 오늘을 대체하지 않는다.
+export const TODAY = '2026-10-07';
 export const EMOJIS = [
   '🐰',
   '🐱',
@@ -57,14 +58,14 @@ export type PreviewRecord = {
 export const RECORDS: PreviewRecord[] = [
   {
     id: '1',
-    date: TODAY,
+    date: '2026-10-06',
     category: '단어',
     minutes: 40,
     start: '19:00',
     quantity: '30개',
     memo: '헷갈린 단어 다시 보기',
   },
-  { id: '2', date: TODAY, category: '문법', minutes: 30, memo: '예문으로 복습' },
+  { id: '2', date: '2026-10-06', category: '문법', minutes: 30, memo: '예문으로 복습' },
   { id: '3', date: '2026-10-05', category: '독해', minutes: 35, start: '20:00' },
   { id: '4', date: '2026-10-04', category: '청해', minutes: 25 },
 ];

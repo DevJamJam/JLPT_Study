@@ -119,7 +119,7 @@ export function DesignPreview() {
   return (
     <>
       <aside className={styles.previewBar} aria-label="디자인 검토 도구">
-        <span>디자인 검토 · 가상 데이터 · 저장·인증 미연결</span>
+        <span>디자인 검토 · 가상 데이터 · 기준일 {TODAY} · 저장·인증 미연결</span>
         <Button
           variant="quiet"
           onClick={() => {
@@ -224,16 +224,30 @@ export function DesignPreview() {
                     </div>
                     <div className={styles.weekGrid} data-testid="week-grid">
                       {weekDates.map((date, index) => (
-                        <article key={date} className={styles.weekDay}>
+                        <article key={date} className={styles.weekDay} data-week-date={date}>
                           <header>
                             <strong className={dateClass(date)}>
                               {weekDays[index]} · {date.slice(5).replace('-', '/')}
                             </strong>
                             <span>{duration(totalFor(date))}</span>
                           </header>
-                          {list(recordsFor(date))}
-                          <Button variant="quiet" onClick={() => detail(date)}>
-                            기록 보기{date <= TODAY ? ' / 추가 ＋' : ''}
+                          <div className={styles.weekRecords}>
+                            {date > TODAY ? (
+                              <p className={styles.empty}>아직 오지 않은 날짜예요.</p>
+                            ) : (
+                              list(recordsFor(date))
+                            )}
+                          </div>
+                          <Button
+                            variant="quiet"
+                            className={styles.weekAction}
+                            disabled={date > TODAY}
+                            title={
+                              date > TODAY ? '미래 날짜에는 기록을 추가할 수 없어요.' : undefined
+                            }
+                            onClick={() => (recordsFor(date).length ? detail(date) : add(date))}
+                          >
+                            {recordsFor(date).length ? '기록 보기' : '기록 추가 ＋'}
                           </Button>
                         </article>
                       ))}

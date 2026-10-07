@@ -237,35 +237,68 @@
   grid-template-columns: minmax(0, 1fr);
 }
 .weekDay {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  padding: 14px 8px;
+  padding: 12px 8px;
   border-bottom: 1px solid var(--decoration-43);
-  background: repeating-linear-gradient(
+  background-image: repeating-linear-gradient(
     transparent 0,
-    transparent 29px,
-    var(--decoration-44) 29px,
-    var(--decoration-44) 30px
+    transparent 23px,
+    var(--decoration-44) 23px,
+    var(--decoration-44) 24px
   );
+  background-origin: content-box;
+  background-clip: content-box;
 }
 .weekDay header {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 6px;
-  font-size: 13px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  font-size: 12px;
+  line-height: 24px;
 }
 .weekDay header > span {
   color: var(--primary-strong);
 }
+.weekRecords {
+  flex: 1;
+  min-width: 0;
+  margin-top: 24px;
+}
 .weekDay .record {
+  display: block;
+  padding: 0;
+  border: 0;
   font-size: 12px;
+  line-height: 24px;
 }
-.weekDay .record strong {
-  font-size: 12px;
+.weekDay .record + .record {
+  margin-top: 24px;
 }
-.weekDay button {
+.weekDay .record > div {
+  min-width: 0;
+}
+.weekDay .record strong,
+.weekDay .record .muted,
+.weekDay .record p,
+.weekDay .empty {
+  display: block;
+  margin: 0;
+  padding: 0;
   font-size: 12px;
-  padding: 8px 2px;
+  line-height: 24px;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+.weekDay .weekAction {
+  align-self: stretch;
+  flex-shrink: 0;
+  min-height: 48px;
+  margin-top: 24px;
+  padding: 11px 2px;
+  font-size: 12px;
+  line-height: 24px;
+  text-align: left;
 }
 .standard {
   max-width: 960px;
@@ -561,6 +594,12 @@
   .weekDay {
     border-right: 1px solid var(--decoration-43);
   }
+  .weekDay:nth-child(2n) {
+    border-right: 0;
+  }
+  .weekDay:last-child {
+    grid-column: 1 / -1;
+  }
   .faces {
     display: flex;
     flex-wrap: wrap;
@@ -591,11 +630,13 @@
   .weekGrid {
     grid-template-columns: repeat(7, minmax(0, 1fr));
   }
-  .weekDay {
-    padding: 12px 8px;
+  .weekDay,
+  .weekDay:nth-child(2n) {
+    border-right: 1px solid var(--decoration-43);
   }
-  .weekDay header {
-    flex-direction: column;
+  .weekDay:last-child {
+    grid-column: auto;
+    border-right: 0;
   }
 }
 

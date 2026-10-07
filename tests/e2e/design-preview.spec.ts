@@ -151,3 +151,78 @@ test('선택 이모지 20개는 실제 컬러 폰트로 렌더링', async ({ pag
   }
   await page.screenshot({ path: `test-results/${info.project.name}-color-settings.png` });
 });
+
+test('주간 기록 유무·미래 진입과 줄 높이·버튼 정렬', async ({ page }, info) => {
+  await page.goto('/preview');
+  await page.getByRole('button', { name: '내 주간', exact: true }).click();
+  const day = (date: string) => page.locator(`[data-week-date="${date}"]`);
+  await day('2026-10-06').getByRole('button', { name: '기록 보기', exact: true }).click();
+  await expect(page.locator('dialog')).toContainText('2026-10-06 공부 기록');
+  await page.getByRole('button', { name: '팝업 닫기' }).click();
+  await day('2026-10-07').getByRole('button', { name: '기록 추가 ＋', exact: true }).click();
+  await expect(page.getByLabel('공부 날짜')).toHaveValue('2026-10-07');
+  await expect(page.locator('dialog[open]')).toHaveCount(1);
+  await page.getByRole('button', { name: '팝업 닫기' }).click();
+  await expect(
+    day('2026-10-08').getByRole('button', { name: '기록 추가 ＋', exact: true }),
+  ).toBeDisabled();
+  await expect(day('2026-10-08')).toContainText('아직 오지 않은 날짜예요.');
+  await expect(day('2026-10-07')).toContainText('아직 기록이 없어요. 공부 기록을 남겨 보아요.');
+  const rows = await page.locator('[data-week-date]').evaluateAll((cards) =>
+    cards.map((card) => {
+      const button = card.querySelector('button')!;
+      const box = card.getBoundingClientRect();
+      return { y: box.y, width: box.width, actionY: button.getBoundingClientRect().y };
+    }),
+  );
+  for (const row of rows) {
+    for (const other of rows.filter((candidate) => Math.abs(candidate.y - row.y) < 1)) {
+      expect(Math.abs(row.actionY - other.actionY)).toBeLessThanOrEqual(1);
+    }
+  }
+  if (info.project.name === 'pad') {
+    const grid = (await page.getByTestId('week-grid').boundingBox())!;
+    expect(Math.abs(rows[6].width - grid.width)).toBeLessThanOrEqual(1);
+  }
+  if (info.project.name === 'desktop') {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const menu = (await page.getByRole('navigation', { name: '하단 메뉴' }).boundingBox())!;
+    for (const button of await page.locator('[data-week-date] button').all()) {
+      const box = (await button.boundingBox())!;
+      expect(box.y + box.height).toBeLessThanOrEqual(menu.y);
+    }
+  }
+  await page.screenshot({ path: `test-results/${info.project.name}-week-aligned.png` });
+  // 기존 메모를 길게 바꾸어 실제 줄바꿈과 노트 줄 높이를 검사한다. 데이터 저장은 하지 않는다.
+  await day('2026-10-06')
+    .locator('p')
+    .first()
+    .evaluate((memo) => {
+      memo.textContent = '헷갈린 단어를 다시 읽고 예문을 천천히 공부했어요. '.repeat(5);
+    });
+  const metrics = await day('2026-10-06')
+    .locator('p')
+    .first()
+    .evaluate((memo) => {
+      const range = document.createRange();
+      range.selectNodeContents(memo);
+      const rects = Array.from(range.getClientRects());
+      const parent = memo.closest('[data-week-date]')!.getBoundingClientRect();
+      const style = getComputedStyle(memo);
+      return {
+        lineHeight: style.lineHeight,
+        margin: style.margin,
+        lineYs: [...new Set(rects.map((rect) => rect.y))],
+        fits: rects.every((rect) => rect.x >= parent.x && rect.right <= parent.right),
+      };
+    });
+  expect(metrics.lineHeight).toBe('24px');
+  expect(metrics.margin).toBe('0px');
+  expect(metrics.fits).toBe(true);
+  expect(metrics.lineYs.length).toBeGreaterThan(1);
+  for (let index = 1; index < metrics.lineYs.length; index++) {
+    expect(metrics.lineYs[index] - metrics.lineYs[index - 1]).toBe(24);
+  }
+  await noOverflow(page);
+  await page.screenshot({ path: `test-results/${info.project.name}-week-long-memo.png` });
+});
