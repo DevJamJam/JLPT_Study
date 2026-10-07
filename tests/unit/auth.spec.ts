@@ -58,7 +58,8 @@ test('scrypt salt는 계정별 무작위이며 PIN·pepper·비용 메타데이�
   await expect(hashPin('1234\n', pepper)).rejects.toThrow('네 자리');
 });
 
-test('세션 토큰 32바이트·해시만 DB 저장·고정 쿠키 설정', () => {
+test('세션 토큰 32바이트·해시만 DB 저장·고정 쿠키 설정', async () => {
+  await expect(import('../../src/server/auth/index')).rejects.toThrow('Client Component');
   const a = createSessionToken(),
     b = createSessionToken();
   expect(Buffer.from(a.token, 'base64url')).toHaveLength(32);
