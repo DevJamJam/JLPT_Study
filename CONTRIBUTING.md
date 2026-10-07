@@ -7,7 +7,7 @@
 - 한 기능/버그 = Issue 하나 = Branch 하나 = PR 하나.
 - 일반 PR base는 main. 목적·구현 결과·검증·관련 Issue·UI 캡처를 작성한다.
 - 수정은 같은 작업 브랜치에 커밋. 충돌은 작성자가 해결한다.
-- PR 내용을 사용자가 확인한 후 병합한다. 승인 인원이나 보호 규칙이 설정됐다고 주장하지 않는다.
+- 작업·검증 → 커밋·PR → 블로그 HTML 전달 → 작성자의 최종 재검토 순서로 진행한다. 재검토와 필수 검사가 통과하고 특이사항이 없으면 사용자의 사전 승인에 따라 병합한다. 특이사항은 병합 전에 사용자에게 문제·영향·수정 방향을 알린다. 승인 인원이나 보호 규칙이 설정됐다고 주장하지 않는다.
 - 최초 빈 레포 기준 커밋만 main 초기화 예외. 이후 main 직접 개발 금지.
 
 ## 커밋과 기술 블로그
@@ -25,4 +25,4 @@ TypeScript와 분리된 CSS Modules/CSS 변수를 사용한다. 확정 설계를
 
 ## 소스 포맷
 
-HTML·CSS·JavaScript는 줄바꿈과 두 칸 들여쓰기를 유지한다. `.editorconfig`와 `.prettierrc.json`을 기준으로 한다. 포맷터 패키지·format 명령·CI 연결은 앱 초기화 때 구성한다. 기능 전용 코드는 features 내부, 재사용 UI는 components/ui와 components/layout, 공통 함수는 lib, 비밀값과 인증은 server에 둔다.
+HTML·CSS·JavaScript는 줄바꿈과 두 칸 들여쓰기를 유지한다. `.editorconfig`와 `.prettierrc.json`을 기준으로 한다. 포맷터·format 명령·CI가 구성되어 있다. npm run check와 npm run build를 실행하며 화면 변경은 관련 브라우저 검사도 수행한다. 기능 전용 코드는 features 내부, 재사용 UI는 components/ui와 components/layout, 공통 함수는 lib, 비밀값과 인증은 server에 둔다.

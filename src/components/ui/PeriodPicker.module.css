@@ -1,0 +1,31 @@
+.picker {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 12px;
+  align-items: center;
+  margin: 8px 0 20px;
+}
+.picker span {
+  text-align: center;
+  min-width: 0;
+  font-weight: 700;
+  color: var(--decoration-34);
+  font-size: 14px;
+}
+.picker button {
+  border: 1px solid var(--decoration-33);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--notebook-paper);
+  color: var(--text);
+  cursor: pointer;
+}
+.picker svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+}

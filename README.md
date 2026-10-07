@@ -4,7 +4,7 @@ JLPT를 준비하는 소규모 스터디를 위한 공부 기록 웹앱입니다
 
 ## 현재 진행 상태
 
-현재는 **앱 초기화 단계**입니다. Next.js 초기 페이지와 개발 검사 명령을 구성했습니다. 기능 화면·인증·DB는 다음 단계에서 구현합니다. 초기화 작업은 이슈 #3에서 관리합니다.
+현재는 **공통 디자인·반응형 화면 구현 단계**입니다. /preview에서 가상 데이터로 홈·달력·스터디·내 기록·로그인·입력·설정을 검토할 수 있습니다. 실제 인증·저장·DB는 아직 연결하지 않았습니다.
 
 | 항목                         | 상태                                    |
 | ---------------------------- | --------------------------------------- |
@@ -56,7 +56,7 @@ HTML 파일은 내려받아 브라우저에서 열 수 있습니다. 시안의 �
 | 테스트           | Vitest / Playwright                 |
 | 배포             | Vercel                              |
 
-실제 패키지 버전은 프로젝트 생성 때 호환성을 확인하고 lockfile로 고정합니다. Next.js·React·TypeScript·ESLint·Prettier만 설치했습니다. TanStack Query·Supabase·SweetAlert2·Vitest·Playwright는 기능 구현 때 추가합니다.
+실제 패키지 버전은 프로젝트 생성 때 호환성을 확인하고 lockfile로 고정합니다. Next.js·React·TypeScript·ESLint·Prettier·React Icons·SweetAlert2·Playwright를 설치했습니다. TanStack Query·Supabase·Vitest는 해당 기능 단계에서 추가합니다.
 
 ## 폴더 구조
 
@@ -79,9 +79,20 @@ src/
     layout.tsx
     page.tsx
     page.module.css
+  components/
+    ui/
+    layout/
+  features/
+    design-preview/
+  lib/
+    notifications.ts
   styles/
     tokens.css
     globals.css
+    notifications.css
+tests/
+  e2e/
+playwright.config.ts
 package.json
 package-lock.json
 AGENTS.md
@@ -128,15 +139,17 @@ git clone https://github.com/DevJamJam/JLPT_Study.git
 cd JLPT_Study
 ```
 
-앱 초기화 PR 병합 전에는 작업 브랜치를 선택합니다.
+디자인 PR 병합 전에는 작업 브랜치를 선택합니다. 병합 후에는 main에서 실행합니다.
 
 ```bash
-git switch chore/3-app-initialization
+git switch feature/5-responsive-design
 npm ci
 npm run dev
 ```
 
-브라우저에서 http://localhost:3000 을 엽니다. `npm run check`는 포맷·린트·타입 검사, `npm run build`는 운영 빌드, `npm run format`은 소스 포맷 정리입니다. 기존 docs 문서는 포맷 자동 변경에서 제외합니다.
+브라우저에서 http://localhost:3000/preview 를 엽니다. 디자인 검토용 가상 데이터이며 입력 내용을 실제로 저장하지 않습니다. `npm run check`는 포맷·린트·타입 검사, `npm run build`는 운영 빌드, `npm run format`은 소스 포맷 정리입니다. 기존 docs 문서는 포맷 자동 변경에서 제외합니다.
+
+브라우저 검사: `npx playwright install chromium` 후 `npm run test:e2e`. 검사 명령은 운영 빌드 서버를 자동으로 시작합니다. SE3·패드·PC는 Chromium 화면 크기 검사이며 실제 Safari 기기 검사가 아닙니다.
 
 Supabase와 배포 비밀값은 채팅이나 Git에 저장하지 않습니다. 앱 구현 때 `.env.example`에는 이름만 제공하고 실제 값은 로컬·배포 환경변수로 설정합니다.
 
@@ -146,10 +159,11 @@ Supabase와 배포 비밀값은 채팅이나 Git에 저장하지 않습니다. �
 2. 최신 main에서 `feature/번호-기능`, `fix/번호-기능`, `chore/번호-작업` 브랜치를 만듭니다.
 3. 의미 있는 변경을 검증하고 커밋합니다.
 4. **커밋 하나당 기술 블로그 HTML 하나**를 레포 밖에서 별도로 전달하고 커밋·PR 링크를 연결합니다. 기존 docs/blog 세 글은 초기 기록으로 유지합니다.
-5. 작업 브랜치에서 main으로 PR을 열고 변경 내용과 검증 결과를 확인합니다.
+5. 작업 브랜치에서 main으로 PR을 열고 HTML 전달 후 최신 커밋을 재검토합니다.
+6. 필수 검사 통과와 특이사항 없음이 확인되면 병합합니다. 특이사항은 병합 전에 사용자에게 알립니다.
 
 커밋 형식은 `type: 한국어 요약 (#이슈번호)`입니다. develop은 사용하지 않습니다. HTML·CSS·JavaScript는 읽을 수 있도록 줄바꿈과 두 칸 들여쓰기를 사용합니다. 포맷터 설정만 추가했다고 자동 실행까지 구성됐다고 보고하지 않습니다.
 
 ## 현재 검증 범위
 
-문서 정적 검사에 이어 npm run check(포맷·린트·타입)와 npm run build를 실행했습니다. 초기 페이지 서버 응답도 확인합니다. 실제 브라우저·iPhone SE3·DB·인증·기능 테스트는 아직 수행하지 않았습니다.
+포맷·린트·타입·운영 빌드와 Chromium 화면 검사를 수행합니다. 375×667, 820×1180, 1280×900에서 간격·중앙 정렬·공휴일 예시·팝업·입력 유지·설정 동선을 검증합니다. 실제 iPhone Safari·DB·인증·기기 동기화는 미검증입니다. 공휴일 세 날짜는 디자인 예시이며 공식 API 데이터가 아닙니다.

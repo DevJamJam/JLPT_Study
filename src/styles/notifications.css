@@ -1,0 +1,14 @@
+.study-alert,
+.study-toast {
+  color: var(--text);
+  border-radius: var(--radius-dialog);
+  font-family: inherit;
+}
+.study-alert .study-alert-confirm {
+  background: var(--danger);
+}
+.study-toast {
+  background: var(--success-soft);
+  color: var(--success);
+  border: 1px solid var(--border);
+}
