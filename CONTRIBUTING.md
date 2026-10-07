@@ -22,3 +22,7 @@
 
 TypeScript와 분리된 CSS Modules/CSS 변수를 사용한다. 확정 설계를 우선하며 실사용 데이터·비밀값·권리 확인되지 않은 에셋를 공개 레포에 넣지 않는다. 테스트는 실제 실행 결과와 미실행 항목을 구분한다.
 시안 중앙 정렬·팝업 모서리·SE3/패드/PC 반응형을 실제 화면에서 확인한다.
+
+## 소스 포맷
+
+HTML·CSS·JavaScript는 줄바꿈과 두 칸 들여쓰기를 유지한다. `.editorconfig`와 `.prettierrc.json`을 기준으로 한다. 포맷터 패키지·format 명령·CI 연결은 앱 초기화 때 구성한다. 기능 전용 코드는 features 내부, 재사용 UI는 components/ui와 components/layout, 공통 함수는 lib, 비밀값과 인증은 server에 둔다.
