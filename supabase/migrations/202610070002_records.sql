@@ -24,7 +24,8 @@ declare
   request_row public.record_requests;
   result_row public.study_records;
   daily_total bigint;
-  normalized_memo text := nullif(btrim(p_memo, E' \t\n\r\f\v'), '');
+  normalized_memo text := nullif(btrim(p_memo,
+    U&'\0009\000A\000B\000C\000D\0020\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000\FEFF'), '');
 begin
   -- 삭제·가입·저장 모두 동일한 그룹→멤버 잠금 순서를 사용한다.
   perform 1 from public.study_groups where id = p_group_id for update;
