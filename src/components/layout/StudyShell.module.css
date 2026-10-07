@@ -1,0 +1,126 @@
+.shell {
+  min-height: 100svh;
+  background: var(--bg);
+}
+.month,
+.week {
+  background-image:
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+  background-size: 23px 23px;
+}
+.month {
+  background-color: var(--notebook-pink);
+}
+.week {
+  background-color: var(--notebook-lavender);
+}
+.header {
+  height: 64px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.headerInner {
+  height: 100%;
+  max-width: 1120px;
+  padding: 0 16px;
+  margin: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.brand {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: var(--primary-strong);
+}
+.avatar {
+  border: 0;
+  padding: 0;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--primary-soft);
+  cursor: pointer;
+}
+.avatar span {
+  display: block;
+  font-size: 26px;
+  line-height: 1;
+}
+.content {
+  max-width: 1120px;
+  margin: auto;
+  padding: 24px 16px 120px;
+}
+.month .content,
+.week .content {
+  padding-top: 0;
+}
+.nav {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(100%, 1120px);
+  min-height: 74px;
+  padding: 8px 8px max(8px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  border-top: 2px solid var(--decoration-46);
+  background: var(--surface);
+  z-index: 10;
+}
+.navButton {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 56px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+.navButton[aria-current] {
+  color: var(--primary-strong);
+  font-weight: 800;
+}
+.icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+}
+.icon svg {
+  width: 22px;
+  height: 22px;
+}
+.add .icon {
+  width: 44px;
+  height: 44px;
+  margin-top: -18px;
+  border-radius: 15px;
+  background: var(--primary-strong);
+  color: var(--surface);
+}
+.add .icon svg {
+  width: 28px;
+  height: 28px;
+}
+@media (min-width: 768px) {
+  .content {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  .headerInner {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
