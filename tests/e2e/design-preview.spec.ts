@@ -122,3 +122,32 @@ test('스터디·내 기록·홈·로그인 가로 넘침과 설정 진입', asy
   await page.screenshot({ path: `test-results/${info.project.name}-login.png`, fullPage: false });
   expect(errors).toEqual([]);
 });
+
+test('선택 이모지 20개는 실제 컬러 폰트로 렌더링', async ({ page }, info) => {
+  await page.goto('/preview');
+  await page.getByRole('button', { name: '내 설정 열기' }).click();
+  const buttons = page.locator('button[aria-label$="이모지 선택"]');
+  await expect(buttons).toHaveCount(20);
+  await page.evaluate(() => document.fonts.ready);
+  const client = await page.context().newCDPSession(page);
+  await client.send('DOM.enable');
+  await client.send('CSS.enable');
+  const { root } = await client.send('DOM.getDocument');
+  for (let index = 0; index < 20; index++) {
+    const label = await buttons.nth(index).getAttribute('aria-label');
+    const { nodeId } = await client.send('DOM.querySelector', {
+      nodeId: root.nodeId,
+      selector: `button[aria-label="${label}"]`,
+    });
+    const { fonts } = await client.send('CSS.getPlatformFontsForNode', { nodeId });
+    expect(
+      fonts.some(
+        (font) =>
+          ['Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji'].includes(font.familyName) &&
+          font.glyphCount > 0,
+      ),
+      `${label}의 실제 컬러 폰트`,
+    ).toBe(true);
+  }
+  await page.screenshot({ path: `test-results/${info.project.name}-color-settings.png` });
+});
