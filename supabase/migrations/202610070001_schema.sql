@@ -46,7 +46,7 @@ create table public.sessions (
   user_id uuid not null references public.users on delete cascade,
   expires_at timestamptz not null,
   mode text not null default 'normal' check (mode in ('normal', 'change_pin')),
-  credential_version integer not null check (credential_version > 0),
+  credential_version integer not null default 1 check (credential_version > 0),
   created_at timestamptz not null default now()
 );
 
@@ -87,7 +87,7 @@ create table public.admin_accounts (
 create table public.admin_sessions (
   token_hash text primary key,
   admin_id uuid not null references public.admin_accounts on delete cascade,
-  credential_version integer not null check (credential_version > 0),
+  credential_version integer not null default 1 check (credential_version > 0),
   expires_at timestamptz not null,
   created_at timestamptz not null default now()
 );

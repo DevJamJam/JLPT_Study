@@ -83,7 +83,7 @@ select pg_temp.expect_error($q$select pg_temp.save('10000000-0000-0000-0000-0000
 select pg_temp.expect_error($q$select pg_temp.save('10000000-0000-0000-0000-000000000002', 1, amount => 100000, unit => 'page')$q$, 'VALIDATION_ERROR');
 select pg_temp.expect_error($q$select pg_temp.save('10000000-0000-0000-0000-000000000002', 1, note => repeat('🐰',501))$q$, 'VALIDATION_ERROR');
 select pg_temp.expect_error($q$select pg_temp.save('10000000-0000-0000-0000-000000000002', 1, category => '99999999-0000-0000-0000-000000000000')$q$, 'VALIDATION_ERROR');
-select pg_temp.assert_true((pg_temp.save('10000000-0000-0000-0000-000000000002', 1350, note => E'  메모\n')).memo = '메모', 'trim and exact daily limit');
+select pg_temp.assert_true((pg_temp.save('10000000-0000-0000-0000-000000000002', 1350, note => U&'\00A0\FEFF메모\000A')).memo = '메모', 'trim and exact daily limit');
 select pg_temp.expect_error($q$select pg_temp.save('10000000-0000-0000-0000-000000000003', 1)$q$, 'DAILY_LIMIT_EXCEEDED');
 select pg_temp.assert_true((pg_temp.save('10000000-0000-0000-0000-000000000001', 90, 2)).version = 3, 'same date excludes old minutes');
 select pg_temp.save('10000000-0000-0000-0000-000000000003', 1440, day => '2024-02-29');
