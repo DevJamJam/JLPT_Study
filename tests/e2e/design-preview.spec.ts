@@ -192,6 +192,24 @@ test('주간 기록 유무·미래 진입과 줄 높이·버튼 정렬', async (
       expect(box.y + box.height).toBeLessThanOrEqual(menu.y);
     }
   }
+  const actionAreas = await page.locator('[data-week-date] button').evaluateAll((buttons) =>
+    buttons.map((button) => {
+      const area = button.parentElement!;
+      const card = area.closest('[data-week-date]')!;
+      return {
+        areaBackground: getComputedStyle(area).backgroundColor,
+        areaImage: getComputedStyle(area).backgroundImage,
+        cardImage: getComputedStyle(card).backgroundImage,
+      };
+    }),
+  );
+  for (const area of actionAreas) {
+    expect(area).toEqual({
+      areaBackground: 'rgb(255, 252, 254)',
+      areaImage: 'none',
+      cardImage: 'none',
+    });
+  }
   await page.screenshot({ path: `test-results/${info.project.name}-week-aligned.png` });
   // 기존 메모를 길게 바꾸어 실제 줄바꿈과 노트 줄 높이를 검사한다. 데이터 저장은 하지 않는다.
   await day('2026-10-06')

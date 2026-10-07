@@ -238,17 +238,19 @@ export function DesignPreview() {
                               list(recordsFor(date))
                             )}
                           </div>
-                          <Button
-                            variant="quiet"
-                            className={styles.weekAction}
-                            disabled={date > TODAY}
-                            title={
-                              date > TODAY ? '미래 날짜에는 기록을 추가할 수 없어요.' : undefined
-                            }
-                            onClick={() => (recordsFor(date).length ? detail(date) : add(date))}
-                          >
-                            {recordsFor(date).length ? '기록 보기' : '기록 추가 ＋'}
-                          </Button>
+                          <div className={styles.weekActions}>
+                            <Button
+                              variant="quiet"
+                              className={styles.weekAction}
+                              disabled={date > TODAY}
+                              title={
+                                date > TODAY ? '미래 날짜에는 기록을 추가할 수 없어요.' : undefined
+                              }
+                              onClick={() => (recordsFor(date).length ? detail(date) : add(date))}
+                            >
+                              {recordsFor(date).length ? '기록 보기' : '기록 추가 ＋'}
+                            </Button>
+                          </div>
                         </article>
                       ))}
                     </div>
