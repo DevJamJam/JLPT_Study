@@ -1,0 +1,55 @@
+:root {
+  --bg: #FFF7FB;
+  --surface: #FFFFFF;
+  --surface-soft: #F7F1FA;
+  --primary: #C56C91;
+  --primary-strong: #8C3A60;
+  --primary-soft: #F9E5EF;
+  --lavender: #AE91C4;
+  --lavender-soft: #EEE5F5;
+  --text: #352B3F;
+  --muted: #6F6178;
+  --border: #E7D6ED;
+  --input-border: #97849F;
+  --track: #EEEAF0;
+  --focus: #68428A;
+  --success: #38674D;
+  --success-soft: #E8F3EC;
+  --danger: #A3364E;
+  --danger-soft: #FCEBF0;
+  --warning: #795516;
+  --warning-soft: #FFF3D6;
+  --overlay: #352B3F66;
+  --emoji-01: #F2BED2; /* 🐰 */
+  --emoji-02: #F5CFAC; /* 🐱 */
+  --emoji-03: #DFC5AF; /* 🐶 */
+  --emoji-04: #DCC6AE; /* 🐻 */
+  --emoji-05: #CBD2DE; /* 🐼 */
+  --emoji-06: #C8CEDC; /* 🐨 */
+  --emoji-07: #F1C19F; /* 🦊 */
+  --emoji-08: #F2C89E; /* 🐯 */
+  --emoji-09: #EED298; /* 🦁 */
+  --emoji-10: #DFC0A5; /* 🐵 */
+  --emoji-11: #BFDBAE; /* 🐸 */
+  --emoji-12: #E7B6CF; /* 🐙 */
+  --emoji-13: #B7D8ED; /* 🐳 */
+  --emoji-14: #B4DDE1; /* 🐬 */
+  --emoji-15: #C6CDDF; /* 🐧 */
+  --emoji-16: #BBD8BD; /* 🐢 */
+  --emoji-17: #BBD8E6; /* 🐟 */
+  --emoji-18: #F0DEA0; /* 🐥 */
+  --emoji-19: #F2C4D7; /* 🌸 */
+  --emoji-20: #F1DFA1; /* ⭐ */
+  --radius-card: 18px;
+  --radius-input: 12px;
+  --radius-dialog: 24px;
+}
+
+/* 노트 장식 전용: 본문 글자·주 버튼에는 사용하지 않음 */
+:root { --notebook-pink: #F8D0E3; --notebook-line: #AE91C4; --notebook-paper: #FFFCFE; --tape-blue: #DCEEF5; }
+
+/* 시안 전체에서 공통으로 사용하는 배경·노트·장식 색상 */
+:root{--decoration-01:#F1EDF3;--decoration-02:#D9CDDD;--decoration-03:#E3D7E4;--decoration-04:#352B3F0C;--decoration-05:#352B3F08;--decoration-06:#F0E7F2;--decoration-07:#FDFBFE;--decoration-08:#95879D;--decoration-09:#FFFFFFED;--decoration-10:#8C3A6025;--decoration-11:#EFD2E0;--decoration-12:#DDD0E8;--decoration-13:#352B3F30;--decoration-14:#352B3F18;--decoration-15:#C9E1D0;--frame-border:#CBB7D5;--grid-line:#FFFFFFB0;--notebook-lavender:#F3EDF8;--decoration-19:#D5BFDC;--month-number:#F585A7;--decoration-21:#73547E;--decoration-22:#765185;--decoration-23:#FFFFFF90;--decoration-24:#CFB5D7;--decoration-25:#FFFEFF;--decoration-26:#FFF1F8;--decoration-27:#FBF6FC;--decoration-28:#927F9A;--decoration-29:#FFF9;--decoration-30:#55415F;--decoration-31:#6B3859;--decoration-32:#E4C7D8;--decoration-33:#B99BC5;--decoration-34:#61466D;--decoration-35:#ECE1F3;--weekly-title:#AF91CE;--decoration-37:#D9C4E7;--decoration-38:#C7ABDB;--decoration-39:#DED2E9;--decoration-40:#E4D9EB;--decoration-41:#644E71;--decoration-42:#C3A4D5;--decoration-43:#E3CDEE;--decoration-44:#F0E4F5;--decoration-45:#6E527A;--decoration-46:#D0B9DC;--decoration-47:#FAEDF6;--decoration-48:#CBB5D7;--decoration-49:#EDDEF4;--decoration-50:#B591C8;--decoration-51:#352B3F10;--decoration-52:#FFFFFFD9;}
+
+/* 날짜: 공휴일·일요일의 빨강이 토요일 파랑보다 우선 */
+:root { --date-saturday: #3563A6; --date-holiday: #B63C55; }
