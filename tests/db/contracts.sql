@@ -108,7 +108,7 @@ reset role;
 
 insert into public.admin_accounts (login_id,password_hash,salt,hash_params) values ('test','TEST_HASH','TEST_SALT','{}');
 select pg_temp.expect_error($q$insert into public.admin_accounts (login_id,password_hash,salt,hash_params) values ('second','TEST_HASH','TEST_SALT','{}')$q$, '23505');
-select pg_temp.expect_error($q$delete from public.study_categories where seed_key = 'vocabulary'$q$, '23001');
+select pg_temp.expect_error($q$delete from public.study_categories where seed_key = 'vocabulary'$q$, 'study_records_category_id_fkey');
 select pg_temp.expect_error($q$insert into public.users (nickname,nickname_key,emoji) values ('토끼','토끼','🐰')$q$, '23505');
 select pg_temp.expect_error($q$update public.study_records set quantity = 1, quantity_unit = null$q$, '23514');
 select pg_temp.expect_error($q$update public.study_records set minutes = 0$q$, '23514');
