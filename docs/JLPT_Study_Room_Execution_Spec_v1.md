@@ -295,15 +295,16 @@ CSS 토큰 기본값: bg #FFF7FB, surface #FFFFFF, primary #C56C91, lavender #AE
 
 ```text
 src/app/             화면 route, layout, api/**/route.ts
-src/features/        auth, records, calendar, statistics, profile, admin, categories
-src/components/      Button, Field, BottomNav, CalendarGrid, RecordCard, MemberCard
-src/server/          session, pin, rateLimit, authorization, db, dto
+src/features/        auth, records, calendar, study, dashboard, profile, admin, categories
+src/components/ui/   공통 Button, Field, Dialog
+src/components/layout/ 공통 Header, BottomNav
+src/server/          server-only session, pin, rateLimit, authorization, db, dto
 src/lib/             queryClient, apiClient, dates, validation
 src/styles/          tokens.css, global.css
 supabase/migrations/ tables, indexes, grants, transaction functions
-scripts/             운영자 계정 복구, 백업·정리 명령
-tests/              unit, server integration, e2e
-docs/               execution-spec, decisions, feedback, releases, blog
+scripts/             초기 관리자 생성·복구, 백업·정리 명령
+tests/               unit, server integration, e2e
+docs/                execution-spec, decisions, feedback, releases, blog
 ```
 
 버전은 착수 시 공식 지원 정보를 확인하고 lockfile로 고정. API를 Node runtime에서 실행해 scrypt 호환을 확보. 핸들러마다 권한 코드를 복붙하지 않고 공통 인증·DTO 계층 사용.
