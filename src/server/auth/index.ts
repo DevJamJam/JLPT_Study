@@ -6,3 +6,4 @@ export * from './session-cookie';
 export * from './request-guard';
 export * from './config';
 export * from './service';
+export * from './supabase-database';

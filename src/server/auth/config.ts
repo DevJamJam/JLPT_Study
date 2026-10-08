@@ -11,7 +11,8 @@ export function loadAuthConfig(env: Record<string, string | undefined>) {
   if (new Set(secrets).size !== secrets.length) throw new AuthConfigError();
   const supabaseUrl = env.SUPABASE_URL;
   const appOrigin = env.APP_ORIGIN;
-  if (!supabaseUrl || !appOrigin || !env.SUPABASE_SERVICE_ROLE_KEY) throw new AuthConfigError();
+  const serviceRoleKey = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !appOrigin || !serviceRoleKey) throw new AuthConfigError();
   try {
     const db = new URL(supabaseUrl);
     const app = new URL(appOrigin);
@@ -32,7 +33,7 @@ export function loadAuthConfig(env: Record<string, string | undefined>) {
   }
   return {
     supabaseUrl,
-    serviceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+    serviceRoleKey,
     appOrigin,
     pepper: secrets[0]!,
     rateLimitKey: secrets[1]!,

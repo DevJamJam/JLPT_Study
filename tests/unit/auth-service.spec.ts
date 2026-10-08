@@ -175,3 +175,18 @@ test('성공한 가입도 현재 credential 버전으로 세션 생성', async (
   expect(f.calls).toEqual(['reserve', 'join', 'read-current', 'success', 'session']);
   expect(result.userId).toBe(account.id);
 });
+
+test('새 Supabase secret 키는 legacy 키보다 우선한다', () => {
+  const env = {
+    SUPABASE_URL: 'https://example.supabase.co',
+    SUPABASE_SECRET_KEY: 'sb_secret_test',
+    SUPABASE_SERVICE_ROLE_KEY: 'legacy',
+    APP_ORIGIN: 'http://localhost:3000',
+    PIN_PEPPER: 'a'.repeat(32),
+    RATE_LIMIT_HMAC_KEY: 'b'.repeat(32),
+    IDEMPOTENCY_HMAC_KEY: 'c'.repeat(32),
+  };
+  expect(loadAuthConfig(env).serviceRoleKey).toBe('sb_secret_test');
+  const modern = { ...env, SUPABASE_SERVICE_ROLE_KEY: undefined };
+  expect(loadAuthConfig(modern).serviceRoleKey).toBe('sb_secret_test');
+});
