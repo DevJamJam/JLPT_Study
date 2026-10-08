@@ -34,6 +34,7 @@ for migration in sorted((ROOT / "supabase/migrations").glob("*.sql")):
 run((ROOT / "tests/db/contracts.sql").read_text())
 
 run((ROOT / "tests/db/auth-contracts.sql").read_text())
+run((ROOT / "tests/db/auth-limit-contracts.sql").read_text())
 
 
 def check_race(first_file, second_file, expected_error):
@@ -66,4 +67,6 @@ check_race("tests/db/concurrent-first.sql", "tests/db/concurrent-second.sql", "D
 assert run("select sum(minutes) from public.study_records where user_id = '00000000-0000-0000-0000-000000000003';") == "1440"
 check_race("tests/db/join-concurrent-first.sql", "tests/db/join-concurrent-second.sql", "GROUP_FULL")
 assert run("select count(*) from public.group_members where group_id = '40000000-0000-0000-0000-000000000001';") == "15"
+check_race("tests/db/auth-limit-concurrent-first.sql", "tests/db/auth-limit-concurrent-second.sql", "AUTH_LIMIT_EXPECTED")
+assert run("select count(*) from public.auth_attempts where nickname_hmac = repeat('1',64) and outcome='pending';") == "5"
 print("PASS: PostgreSQL 스키마·권한·기록 계약·동시 저장 상한·가입·세션·동시 가입 정원")
