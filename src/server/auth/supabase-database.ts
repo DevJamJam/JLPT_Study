@@ -1,6 +1,6 @@
 import type { PublicAuthData } from '../../features/auth/types';
 import type { loadAuthConfig } from './config';
-import { SCRYPT_PARAMS } from './crypto';
+import { SCRYPT_PARAMS, type PinCredential } from './crypto';
 import { PROFILE_EMOJIS, normalizeNickname } from '../../features/auth/validation';
 import { AuthServiceError, type AuthAccount, type AuthDatabase } from './service';
 
@@ -16,6 +16,12 @@ export type { PublicAuthData } from '../../features/auth/types';
 export type UserSessionDatabase = AuthDatabase & {
   resolveSession(tokenHash: string): Promise<PublicAuthData>;
   revokeSession(tokenHash: string): Promise<void>;
+  completePinReset(
+    tokenHash: string,
+    expectedVersion: number,
+    credential: PinCredential,
+    newTokenHash: string,
+  ): Promise<{ expiresAt: string }>;
 };
 
 /** 서버 전용 진입점을 통해 사용한다. groupId는 서버 설정이며 요청 body에서 받지 않는다. */
@@ -61,6 +67,7 @@ export function createSupabaseAuthDatabase(
           IDEMPOTENCY_CONFLICT: 409,
           UNAUTHORIZED: 401,
           PIN_CHANGE_REQUIRED: 403,
+          RESET_NOT_REQUIRED: 409,
         };
         if (
           object(data) &&
@@ -246,6 +253,19 @@ export function createSupabaseAuthDatabase(
         },
         group: { id: row.group_id, name: group.name, maxMembers: 15, memberCount: members.length },
       };
+    },
+    async completePinReset(tokenHash, expectedVersion, credential, newTokenHash) {
+      const value = await rpc('complete_pin_reset', {
+        p_token_hash: tokenHash,
+        p_expected_credential_version: expectedVersion,
+        p_pin_hash: credential.hash,
+        p_salt: credential.salt,
+        p_hash_params: credential.params,
+        p_new_token_hash: newTokenHash,
+      });
+      const row: unknown = Array.isArray(value) && value.length === 1 ? value[0] : value;
+      if (!object(row) || row.mode !== 'normal' || !timestamp(row.expires_at)) throw unavailable();
+      return { expiresAt: row.expires_at };
     },
     async revokeSession(tokenHash) {
       if ((await rpc('revoke_user_session', { p_token_hash: tokenHash })) !== true)

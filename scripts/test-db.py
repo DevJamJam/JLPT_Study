@@ -35,6 +35,7 @@ run((ROOT / "tests/db/contracts.sql").read_text())
 
 run((ROOT / "tests/db/auth-contracts.sql").read_text())
 run((ROOT / "tests/db/join-result-contracts.sql").read_text())
+run((ROOT / "tests/db/complete-reset-contracts.sql").read_text())
 run((ROOT / "tests/db/auth-limit-contracts.sql").read_text())
 
 
@@ -75,5 +76,10 @@ run("insert into public.study_groups(id,name) values ('52000000-0000-4000-8000-0
 check_race("tests/db/join-result-concurrent-first.sql", "tests/db/join-result-concurrent-second.sql", "JOIN_RETRY_EXPECTED")
 if run("select count(*) from public.group_members where group_id='52000000-0000-4000-8000-000000000001';") != "1":
     raise AssertionError("같은 가입 요청의 동시 재시도는 한 명만 생성해야 합니다.")
+
+run((ROOT / "tests/db/complete-reset-concurrent-setup.sql").read_text())
+check_race("tests/db/complete-reset-concurrent-first.sql", "tests/db/complete-reset-concurrent-second.sql", "UNAUTHORIZED")
+assert run("select credential_version from public.user_credentials where user_id='62000000-0000-4000-8000-000000000002';") == "2"
+assert run("select count(*) from public.sessions where user_id='62000000-0000-4000-8000-000000000002';") == "1"
 
 print("PASS: PostgreSQL 스키마·권한·기록 계약·동시 저장 상한·가입·세션·동시 가입 정원·가입 재시도 결과")
