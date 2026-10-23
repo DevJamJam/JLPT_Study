@@ -1,3 +1,4 @@
+import type { PublicAuthData } from '../../features/auth/types';
 import type { loadAuthConfig } from './config';
 import { SCRYPT_PARAMS } from './crypto';
 import { PROFILE_EMOJIS, normalizeNickname } from '../../features/auth/validation';
@@ -11,10 +12,7 @@ const object = (value: unknown): value is Record<string, unknown> =>
 const timestamp = (value: unknown): value is string =>
   typeof value === 'string' && Number.isFinite(Date.parse(value));
 
-export type PublicAuthData = {
-  profile: { id: string; nickname: string; emoji: string; mustChangePin: boolean };
-  group: { id: string; name: string; maxMembers: 15; memberCount: number };
-};
+export type { PublicAuthData } from '../../features/auth/types';
 export type UserSessionDatabase = AuthDatabase & {
   resolveSession(tokenHash: string): Promise<PublicAuthData>;
   revokeSession(tokenHash: string): Promise<void>;

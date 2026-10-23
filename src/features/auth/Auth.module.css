@@ -1,0 +1,166 @@
+.main {
+  min-height: 100svh;
+  padding: 32px 16px 48px;
+  background: var(--bg);
+}
+.brand {
+  display: block;
+  width: fit-content;
+  margin: 0 auto 24px;
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-decoration: none;
+}
+.card {
+  max-width: 420px;
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+}
+.hello {
+  text-align: center;
+}
+.hello > span,
+.profileEmoji {
+  display: block;
+  font-size: 36px;
+  text-align: center;
+}
+.card h1 {
+  margin: 10px 0;
+  font-size: 22px;
+  line-height: 1.5;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.intro {
+  margin: 0 0 24px;
+  color: var(--muted);
+  text-align: center;
+  font-size: 14px;
+}
+.fields,
+.emojiField {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 18px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.field input {
+  min-height: 44px;
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+}
+.help {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.emojiField {
+  margin: 24px 0 18px;
+}
+.emojiField legend {
+  padding: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+.emojiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+.emojiOption {
+  position: relative;
+  min-height: 44px;
+  cursor: pointer;
+}
+.emojiOption input {
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+}
+.emojiOption span {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  font-size: 25px;
+}
+.emojiOption input:checked + span {
+  border-color: var(--primary-strong);
+  background: var(--primary-soft);
+}
+.emojiOption input:focus-visible + span {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 18px 0 24px;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+.consent input {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 2px 0 0;
+  accent-color: var(--primary-strong);
+}
+.error {
+  color: var(--danger);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.fullWidth {
+  width: 100%;
+  margin-top: 22px;
+}
+.switchLink {
+  margin: 24px 0 0;
+  text-align: center;
+  font-size: 14px;
+}
+.switchLink a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--primary-strong);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+@media (min-width: 768px) {
+  .main {
+    padding-top: 56px;
+  }
+  .card {
+    padding: 32px;
+  }
+}
