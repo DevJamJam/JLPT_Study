@@ -14,6 +14,7 @@ type AuthResponses = {
   join: PublicAuthData;
   me: PublicAuthData;
   logout: { loggedOut: true };
+  'change-pin': Pick<PublicAuthData, 'profile'>;
   'complete-reset': Pick<PublicAuthData, 'profile'>;
 };
 export async function authRequest<Path extends keyof AuthResponses>(
@@ -45,7 +46,9 @@ export function authErrorMessage(error: unknown) {
     IDEMPOTENCY_CONFLICT: '가입 요청 내용이 달라졌어요. 입력을 확인해주세요.',
     INVALID_CREDENTIALS: '닉네임 또는 간편 비밀번호를 확인해주세요.',
     VALIDATION_ERROR: '입력한 내용을 확인해주세요.',
-    PIN_UNCHANGED: '초기 비밀번호와 다른 새 비밀번호를 입력해주세요.',
+    PIN_UNCHANGED: '현재 비밀번호와 다른 새 비밀번호를 입력해주세요.',
+    CURRENT_PIN_INVALID: '현재 간편 비밀번호가 올바르지 않아요.',
+    PIN_CHANGE_REQUIRED: '초기화된 비밀번호를 먼저 변경해주세요.',
     RESET_NOT_REQUIRED: '이미 비밀번호 변경을 마쳤어요. 다시 로그인해주세요.',
     AUTH_ATTEMPT_EXPIRED: '요청 시간이 지났어요. 다시 시도해주세요.',
   };

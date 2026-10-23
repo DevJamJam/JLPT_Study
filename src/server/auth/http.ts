@@ -1,7 +1,7 @@
 import { isIP } from 'node:net';
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthConfigError, loadAuthConfig } from './config';
-import { completeReset } from './complete-reset';
+import { changePin } from './change-pin';
 import { hashSessionToken } from './crypto';
 import { RequestGuardError, readMutationJson } from './request-guard';
 import { authenticate, AuthServiceError } from './service';
@@ -17,7 +17,9 @@ const messages: Record<string, string> = {
   INVALID_CREDENTIALS: '닉네임 또는 PIN이 올바르지 않아요.',
   UNAUTHORIZED: '다시 로그인해주세요.',
   RESET_NOT_REQUIRED: '비밀번호 초기화 상태가 아니에요.',
-  PIN_UNCHANGED: '초기 비밀번호와 다른 새 비밀번호를 입력해주세요.',
+  PIN_UNCHANGED: '현재 비밀번호와 다른 새 비밀번호를 입력해주세요.',
+  CURRENT_PIN_INVALID: '현재 간편 비밀번호를 확인해주세요.',
+  PIN_CHANGE_REQUIRED: '초기화된 비밀번호를 먼저 변경해주세요.',
   AUTH_ATTEMPT_EXPIRED: '로그인 요청이 만료되었어요. 다시 시도해주세요.',
   AUTH_RATE_LIMITED: '인증 시도가 많아요. 잠시 후 다시 시도하거나 관리자에게 문의해주세요.',
   ORIGIN_NOT_ALLOWED: '허용되지 않은 요청이에요.',
@@ -118,27 +120,29 @@ export function createAuthHttp(env: Environment, transport: typeof fetch = fetch
       return failure(error);
     }
   }
+  async function updatePin(mode: 'reset' | 'normal', request: NextRequest) {
+    try {
+      const config = loadAuthConfig(env);
+      const body = await readMutationJson(request, config.appOrigin);
+      const hash = tokenHash(request, production);
+      if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
+      const db = createSupabaseAuthDatabase(config, undefined, transport);
+      const result = await changePin(mode, body, hash, trustedAuthSource(request, env), db, config);
+      const response = json({ data: { profile: result.profile } });
+      const { name, options } = sessionCookie(new Date(result.expiresAt), production);
+      response.cookies.set(name, result.token, options);
+      return response;
+    } catch (error) {
+      const response = failure(error);
+      if (response.status === 401) clearCookie(response, production);
+      return response;
+    }
+  }
   return {
     login: (request: NextRequest) => auth('login', request),
     join: (request: NextRequest) => auth('join', request),
-    async completeReset(request: NextRequest) {
-      try {
-        const config = loadAuthConfig(env);
-        const body = await readMutationJson(request, config.appOrigin);
-        const hash = tokenHash(request, production);
-        if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
-        const db = createSupabaseAuthDatabase(config, undefined, transport);
-        const result = await completeReset(body, hash, trustedAuthSource(request, env), db, config);
-        const response = json({ data: { profile: result.profile } });
-        const { name, options } = sessionCookie(new Date(result.expiresAt), production);
-        response.cookies.set(name, result.token, options);
-        return response;
-      } catch (error) {
-        const response = failure(error);
-        if (response.status === 401) clearCookie(response, production);
-        return response;
-      }
-    },
+    completeReset: (request: NextRequest) => updatePin('reset', request),
+    changePin: (request: NextRequest) => updatePin('normal', request),
     async me(request: NextRequest) {
       try {
         const hash = tokenHash(request, production);

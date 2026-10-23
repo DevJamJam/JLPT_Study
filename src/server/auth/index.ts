@@ -8,4 +8,4 @@ export * from './config';
 export * from './service';
 export * from './supabase-database';
 export * from './http';
-export * from './complete-reset';
+export * from './change-pin';

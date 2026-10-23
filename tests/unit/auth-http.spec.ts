@@ -81,9 +81,9 @@ function fixture(
       ]);
     if (path === 'rpc/complete_auth_attempt') return Response.json(!options.attemptExpired);
     if (path === 'rpc/revoke_user_session') return Response.json(true);
-    if (path === 'rpc/complete_pin_reset' && options.resetError)
+    if ((path === 'rpc/complete_pin_reset' || path === 'rpc/change_user_pin') && options.resetError)
       return Response.json({ code: 'P0001', message: options.resetError }, { status: 400 });
-    if (path === 'rpc/complete_pin_reset')
+    if (path === 'rpc/complete_pin_reset' || path === 'rpc/change_user_pin')
       return Response.json({ mode: 'normal', expires_at: expires, token_hash: 'PRIVATE' });
     if (path === 'rpc/create_user_session')
       return Response.json({
@@ -381,5 +381,73 @@ test('PIN 변경 도중 세션/예약이 만료되면401, DB 실패는503이며 
     expect(await response.text()).not.toContain('PRIVATE_SQL');
     if ('attemptExpired' in options)
       expect(calls.some((c) => c.path === 'rpc/complete_pin_reset')).toBe(false);
+  }
+});
+
+test('일반 PIN 변경은 현재 PIN 확인 후 같은 예산·원자 RPC·새 보안 쿠키를 사용한다', async () => {
+  const { http, calls } = fixture();
+  const response = await http.changePin(
+    request('change-pin', { currentPin: '0123', ...resetBody }, resetCookie),
+  );
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ data: { profile: expectedData().profile } });
+  const cookie = response.cookies.get('__Host-jlpt_session')!;
+  expect(cookie.value).not.toBe(token);
+  expect(cookie).toMatchObject({ httpOnly: true, secure: true, sameSite: 'lax', path: '/' });
+  const call = calls.find((c) => c.path === 'rpc/change_user_pin')!;
+  expect(call.body).toMatchObject({
+    p_token_hash: hashSessionToken(token),
+    p_expected_credential_version: 1,
+    p_new_token_hash: hashSessionToken(cookie.value),
+  });
+  expect(call.body).not.toHaveProperty('currentPin');
+  expect(call.body).not.toHaveProperty('newPin');
+  expect(calls.find((c) => c.path === 'rpc/reserve_auth_attempt')?.body?.p_kind).toBe('change_pin');
+  expect(calls.find((c) => c.path === 'rpc/complete_auth_attempt')?.body?.p_outcome).toBe(
+    'success',
+  );
+});
+test('잘못된 현재 PIN·동일한 새 PIN·입력 오류·제한 세션은 일반 변경을 거부한다', async () => {
+  for (const [options, body, status, code] of [
+    [{}, { currentPin: '9999', ...resetBody }, 400, 'CURRENT_PIN_INVALID'],
+    [{}, { currentPin: '0123', newPin: '0123', newPinConfirm: '0123' }, 400, 'PIN_UNCHANGED'],
+    [{}, { ...resetBody }, 400, 'VALIDATION_ERROR'],
+    [{}, { currentPin: '0123', ...resetBody, newPinConfirm: '9999' }, 400, 'VALIDATION_ERROR'],
+    [{ limited: true }, { currentPin: '0123', ...resetBody }, 403, 'PIN_CHANGE_REQUIRED'],
+  ] as const) {
+    const { http, calls } = fixture(options);
+    const response = await http.changePin(request('change-pin', body, resetCookie));
+    expect(response.status).toBe(status);
+    expect((await response.json()).error.code).toBe(code);
+    expect(response.headers.has('set-cookie')).toBe(false);
+    expect(calls.some((c) => c.path === 'rpc/change_user_pin')).toBe(false);
+    if (code === 'CURRENT_PIN_INVALID')
+      expect(calls.find((c) => c.path === 'rpc/complete_auth_attempt')?.body?.p_outcome).toBe(
+        'failure',
+      );
+  }
+});
+test('일반 PIN 변경의 제한·만료·DB 실패·무세션·출처 오류에서 성공 쿠키와 변경은 없다', async () => {
+  for (const [options, headers, status, code] of [
+    [{ rateLimited: true }, resetCookie, 429, 'AUTH_RATE_LIMITED'],
+    [{ attemptExpired: true }, resetCookie, 401, 'AUTH_ATTEMPT_EXPIRED'],
+    [{ resetError: 'UNAUTHORIZED' }, resetCookie, 401, 'UNAUTHORIZED'],
+    [{ resetError: 'PIN_CHANGE_REQUIRED' }, resetCookie, 403, 'PIN_CHANGE_REQUIRED'],
+    [{ resetError: 'SECRET_SQL' }, resetCookie, 503, 'AUTH_UNAVAILABLE'],
+    [{}, {}, 401, 'UNAUTHORIZED'],
+    [{}, { ...resetCookie, origin: 'https://attacker.example' }, 403, 'ORIGIN_NOT_ALLOWED'],
+  ] as const) {
+    const { http, calls } = fixture(options);
+    const response = await http.changePin(
+      request('change-pin', { currentPin: '0123', ...resetBody }, headers),
+    );
+    expect(response.status).toBe(status);
+    expect((await response.json()).error.code).toBe(code);
+    if (status === 401) expect(response.cookies.get('__Host-jlpt_session')?.maxAge).toBe(0);
+    else expect(response.headers.has('set-cookie')).toBe(false);
+    if (status === 429)
+      expect(
+        calls.some((c) => c.path === 'user_credentials' || c.path === 'rpc/change_user_pin'),
+      ).toBe(false);
   }
 });

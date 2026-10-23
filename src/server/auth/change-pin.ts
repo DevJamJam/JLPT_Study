@@ -3,17 +3,25 @@ import { createSessionToken, hashPin, verifyPin } from './crypto';
 import { AuthServiceError, reserveUserAttempt } from './service';
 import type { UserSessionDatabase } from './supabase-database';
 
-export async function completeReset(
+export async function changePin(
+  mode: 'reset' | 'normal',
   input: Record<string, unknown>,
   tokenHash: string,
   source: string,
   db: UserSessionDatabase,
   config: { pepper: string; rateLimitKey: string; idempotencyKey: string },
 ) {
-  if (!isPin(input.newPin) || input.newPin !== input.newPinConfirm)
+  if (
+    !isPin(input.newPin) ||
+    input.newPin !== input.newPinConfirm ||
+    (mode === 'normal' && !isPin(input.currentPin))
+  )
     throw new AuthServiceError(400, 'VALIDATION_ERROR');
   const current = await db.resolveSession(tokenHash);
-  if (!current.profile.mustChangePin) throw new AuthServiceError(409, 'RESET_NOT_REQUIRED');
+  if (mode === 'reset' && !current.profile.mustChangePin)
+    throw new AuthServiceError(409, 'RESET_NOT_REQUIRED');
+  if (mode === 'normal' && current.profile.mustChangePin)
+    throw new AuthServiceError(403, 'PIN_CHANGE_REQUIRED');
   const normalized = normalizeNickname(current.profile.nickname);
   if (!normalized) throw new AuthServiceError(503, 'AUTH_UNAVAILABLE');
   const reservation = await reserveUserAttempt(
@@ -32,6 +40,13 @@ export async function completeReset(
   try {
     const account = await db.findAccountById(current.profile.id);
     if (!account) throw new AuthServiceError(401, 'UNAUTHORIZED');
+    if (
+      mode === 'normal' &&
+      !(await verifyPin(input.currentPin as string, account.credential, config.pepper))
+    ) {
+      await finish('failure');
+      throw new AuthServiceError(400, 'CURRENT_PIN_INVALID');
+    }
     if (await verifyPin(input.newPin, account.credential, config.pepper)) {
       await finish('failure');
       throw new AuthServiceError(400, 'PIN_UNCHANGED');
@@ -39,7 +54,8 @@ export async function completeReset(
     const credential = await hashPin(input.newPin, config.pepper);
     if (!(await finish('success'))) throw new AuthServiceError(401, 'AUTH_ATTEMPT_EXPIRED');
     const { token, tokenHash: newTokenHash } = createSessionToken();
-    const session = await db.completePinReset(
+    const session = await db.replacePin(
+      mode,
       tokenHash,
       account.credentialVersion,
       credential,
