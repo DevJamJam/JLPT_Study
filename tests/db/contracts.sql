@@ -108,6 +108,13 @@ reset role;
 
 insert into public.admin_accounts (login_id,password_hash,salt,hash_params) values ('test','TEST_HASH','TEST_SALT','{}');
 select pg_temp.expect_error($q$insert into public.admin_accounts (login_id,password_hash,salt,hash_params) values ('second','TEST_HASH','TEST_SALT','{}')$q$, '23505');
+insert into public.admin_accounts (login_id,password_hash,salt,hash_params)
+  values ('bootstrap-retry','DO_NOT_REPLACE','OTHER_SALT','{}')
+  on conflict (singleton) do nothing;
+select pg_temp.assert_true((select count(*)=1 from public.admin_accounts)
+  and exists (select 1 from public.admin_accounts where login_id='test'
+    and password_hash='TEST_HASH' and salt='TEST_SALT' and credential_version=1),
+  'admin bootstrap retry preserves existing credential');
 select pg_temp.expect_error($q$delete from public.study_categories where seed_key = 'vocabulary'$q$, 'study_records_category_id_fkey');
 select pg_temp.expect_error($q$insert into public.users (nickname,nickname_key,emoji) values ('토끼','토끼','🐰')$q$, '23505');
 select pg_temp.expect_error($q$update public.study_records set quantity = 1, quantity_unit = null$q$, '23514');
