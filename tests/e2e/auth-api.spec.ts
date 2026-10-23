@@ -15,3 +15,7 @@ test('실제 서버는 인증 경로를 제공하고 무효 사용자 쿠키를 
   expect((await request.get('/api/auth/login')).status()).toBe(405);
   expect((await request.get('/api/auth/logout')).status()).toBe(405);
 });
+
+test('실제 서버는 가입 경로의 GET을405로 차단한다', async ({ request }) => {
+  expect((await request.get('/api/auth/join')).status()).toBe(405);
+});

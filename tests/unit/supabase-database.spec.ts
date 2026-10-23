@@ -113,8 +113,8 @@ test('legacy 서버 키는 Bearer를 사용하고 잘못된 연결 설정은 거
   ).toThrow('AUTH_UNAVAILABLE');
 });
 
-test('가입은 서버 그룹과 기존 RPC 매개변수를 사용한다', async () => {
-  const { db, calls } = fake([id]);
+test('가입은 서버 그룹과 결과 RPC 매개변수를 사용한다', async () => {
+  const { db, calls } = fake([{ userId: id, created: true }]);
   const input = {
     nickname: '유리',
     nicknameKey: '유리',
@@ -127,7 +127,7 @@ test('가입은 서버 그룹과 기존 RPC 매개변수를 사용한다', async
     salt: Buffer.alloc(16).toString('base64'),
     params: SCRYPT_PARAMS,
   };
-  expect(await db.join(input, 'b'.repeat(64), credential)).toBe(id);
+  expect(await db.join(input, 'b'.repeat(64), credential)).toEqual({ userId: id, created: true });
   const body = JSON.parse(calls[0].init.body as string);
   expect(body).toMatchObject({
     p_group_id: id,
@@ -162,4 +162,37 @@ test('세션 조회의 잘못된 행·그룹·정원 응답은 공개 DTO로 내
       status: 503,
     });
   }
+});
+
+test('가입 그룹은 서버 단일 스터디에서 도출하고 여러 그룹·잘못된 결과는 거부한다', async () => {
+  const input = {
+    nickname: '유리',
+    nicknameKey: '유리',
+    pin: '0123',
+    emoji: '🐰' as const,
+    requestId: id,
+  };
+  const credential = {
+    hash: 'a'.repeat(64),
+    salt: Buffer.alloc(16).toString('base64'),
+    params: SCRYPT_PARAMS,
+  };
+  for (const groups of [[], [{ id }, { id }]]) {
+    let calls = 0;
+    const transport: typeof fetch = async () => {
+      calls++;
+      return Response.json(groups);
+    };
+    await expect(
+      createSupabaseAuthDatabase(config, undefined, transport).join(
+        input,
+        'b'.repeat(64),
+        credential,
+      ),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(calls).toBe(1);
+  }
+  await expect(
+    fake([{ userId: id, created: 'true' }]).db.join(input, 'b'.repeat(64), credential),
+  ).rejects.toMatchObject({ status: 503 });
 });

@@ -146,9 +146,21 @@ export function createSupabaseAuthDatabase(
     },
     findAccountById,
     async join(input, fingerprint, credential) {
-      if (!groupId) throw unavailable();
-      const value = await rpc('complete_join', {
-        p_group_id: groupId,
+      let targetGroupId = groupId;
+      if (!targetGroupId) {
+        // 미리 생성된 단일 스터디만 허용한다. 요청 body의 그룹은 사용하지 않는다.
+        const groups = await request('study_groups?select=id&limit=2');
+        if (
+          !Array.isArray(groups) ||
+          groups.length !== 1 ||
+          !object(groups[0]) ||
+          !uuid(groups[0].id)
+        )
+          throw unavailable();
+        targetGroupId = groups[0].id;
+      }
+      const value = await rpc('complete_join_result', {
+        p_group_id: targetGroupId,
         p_request_id: input.requestId,
         p_fingerprint: fingerprint,
         p_nickname: input.nickname,
@@ -158,8 +170,9 @@ export function createSupabaseAuthDatabase(
         p_salt: credential.salt,
         p_hash_params: credential.params,
       });
-      if (!uuid(value)) throw unavailable();
-      return value;
+      if (!object(value) || !uuid(value.userId) || typeof value.created !== 'boolean')
+        throw unavailable();
+      return { userId: value.userId, created: value.created };
     },
     async createSession(id, expectedVersion, tokenHash) {
       const value = await rpc('create_user_session', {
