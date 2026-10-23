@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { StudyDialog } from '@/components/ui/StudyDialog';
+import { toast } from '@/lib/notifications';
+import { PinChangeForm } from './PinChangeForm';
 import { Button } from '@/components/ui/Button';
 import { authRequest, AuthClientError } from './client';
 import { ResetPinForm } from './ResetPinForm';
@@ -14,6 +17,12 @@ export function SessionHome() {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [pending, setPending] = useState(false);
+  const [pinChanged, setPinChanged] = useState(0);
+  useEffect(() => {
+    if (pinChanged) void toast('간편 비밀번호를 변경했어요.');
+  }, [pinChanged]);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pinMode, setPinMode] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const inFlight = useRef(false);
   useEffect(() => {
@@ -48,7 +57,22 @@ export function SessionHome() {
   }
   return (
     <main className={styles.main}>
-      <span className={styles.brand}>JLPT STUDY ROOM</span>
+      <header className={styles.sessionHeader}>
+        <span className={styles.brand}>JLPT STUDY ROOM</span>
+        {session && !session.profile.mustChangePin && (
+          <button
+            type="button"
+            className={styles.avatar}
+            aria-label="내 설정 열기"
+            onClick={() => {
+              setPinMode(false);
+              setSettingsOpen(true);
+            }}
+          >
+            <span aria-hidden="true">{session.profile.emoji}</span>
+          </button>
+        )}
+      </header>
       <section className={styles.card} aria-labelledby="welcome-title">
         {session ? (
           <>
@@ -93,6 +117,49 @@ export function SessionHome() {
           </>
         )}
       </section>
+      {settingsOpen && session && !session.profile.mustChangePin && (
+        <StudyDialog
+          title={pinMode ? '간편 비밀번호 변경' : '내 설정'}
+          onClose={() => {
+            if (!resetBusy && !pending) setSettingsOpen(false);
+          }}
+        >
+          <p className={styles.settingsNickname}>
+            닉네임 <strong>{session.profile.nickname}</strong>
+          </p>
+          {pinMode ? (
+            <>
+              <p className={styles.help}>
+                변경하면 다른 기기에서는 새 비밀번호로 다시 로그인해야 해요.
+              </p>
+              <PinChangeForm
+                mode="normal"
+                onBusyChange={setResetBusy}
+                onComplete={() => {
+                  setSettingsOpen(false);
+                  setRetry((value) => value + 1);
+                  setPinChanged((value) => value + 1);
+                }}
+              />
+              <Button variant="quiet" disabled={resetBusy} onClick={() => setPinMode(false)}>
+                설정으로 돌아가기
+              </Button>
+            </>
+          ) : (
+            <div className={styles.settingsActions}>
+              <Button onClick={() => setPinMode(true)}>간편 비밀번호 변경</Button>
+              <Button variant="secondary" disabled={pending} onClick={logout}>
+                {pending ? '로그아웃 중…' : '로그아웃'}
+              </Button>
+            </div>
+          )}
+          {error && (
+            <p role="alert" className={styles.error}>
+              {error}
+            </p>
+          )}
+        </StudyDialog>
+      )}
     </main>
   );
 }

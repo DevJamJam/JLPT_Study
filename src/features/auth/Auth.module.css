@@ -168,3 +168,40 @@
 .resetForm {
   margin-bottom: 24px;
 }
+
+.sessionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 420px;
+  min-height: 48px;
+  margin: 0 auto 24px;
+}
+.sessionHeader .brand {
+  margin: 0 auto;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: var(--surface);
+  cursor: pointer;
+}
+.avatar span {
+  display: block;
+  font-size: 26px;
+  line-height: 1;
+}
+.settingsNickname {
+  margin: 0 0 16px;
+}
+.settingsActions {
+  display: grid;
+  gap: 12px;
+}

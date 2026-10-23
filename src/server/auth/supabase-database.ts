@@ -16,7 +16,8 @@ export type { PublicAuthData } from '../../features/auth/types';
 export type UserSessionDatabase = AuthDatabase & {
   resolveSession(tokenHash: string): Promise<PublicAuthData>;
   revokeSession(tokenHash: string): Promise<void>;
-  completePinReset(
+  replacePin(
+    mode: 'reset' | 'normal',
     tokenHash: string,
     expectedVersion: number,
     credential: PinCredential,
@@ -254,8 +255,8 @@ export function createSupabaseAuthDatabase(
         group: { id: row.group_id, name: group.name, maxMembers: 15, memberCount: members.length },
       };
     },
-    async completePinReset(tokenHash, expectedVersion, credential, newTokenHash) {
-      const value = await rpc('complete_pin_reset', {
+    async replacePin(mode, tokenHash, expectedVersion, credential, newTokenHash) {
+      const value = await rpc(mode === 'reset' ? 'complete_pin_reset' : 'change_user_pin', {
         p_token_hash: tokenHash,
         p_expected_credential_version: expectedVersion,
         p_pin_hash: credential.hash,

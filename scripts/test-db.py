@@ -36,6 +36,7 @@ run((ROOT / "tests/db/contracts.sql").read_text())
 run((ROOT / "tests/db/auth-contracts.sql").read_text())
 run((ROOT / "tests/db/join-result-contracts.sql").read_text())
 run((ROOT / "tests/db/complete-reset-contracts.sql").read_text())
+run((ROOT / "tests/db/change-pin-contracts.sql").read_text())
 run((ROOT / "tests/db/auth-limit-contracts.sql").read_text())
 
 
@@ -83,3 +84,9 @@ assert run("select credential_version from public.user_credentials where user_id
 assert run("select count(*) from public.sessions where user_id='62000000-0000-4000-8000-000000000002';") == "1"
 
 print("PASS: PostgreSQL 스키마·권한·기록 계약·동시 저장 상한·가입·세션·동시 가입 정원·가입 재시도 결과")
+
+run((ROOT / "tests/db/change-pin-concurrent-setup.sql").read_text())
+check_race("tests/db/change-pin-concurrent-first.sql", "tests/db/change-pin-concurrent-second.sql", "UNAUTHORIZED")
+assert run("select credential_version from public.user_credentials where user_id='64000000-0000-4000-8000-000000000002';") == "2"
+assert run("select count(*) from public.sessions where user_id='64000000-0000-4000-8000-000000000002';") == "1"
+print("PASS: 일반 PIN change transaction and concurrency")
