@@ -20,7 +20,7 @@
     "test:admin-bootstrap": "node --test tests/server/admin-bootstrap.test.mjs"
   },
   "dependencies": {
-    "next": "16.4.0",
+    "next": "16.4.2",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-icons": "5.7.0",
@@ -33,7 +33,7 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "eslint": "9.39.5",
-    "eslint-config-next": "16.4.0",
+    "eslint-config-next": "16.4.2",
     "prettier": "3.9.9",
     "typescript": "6.0.3"
   }
