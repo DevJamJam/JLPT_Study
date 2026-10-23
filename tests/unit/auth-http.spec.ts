@@ -42,6 +42,8 @@ function fixture(
     failure?: string;
     created?: boolean;
     joinError?: string;
+    resetError?: string;
+    attemptExpired?: boolean;
   } = {},
 ) {
   const calls: {
@@ -77,8 +79,12 @@ function fixture(
           credential_version: 1,
         },
       ]);
-    if (path === 'rpc/complete_auth_attempt' || path === 'rpc/revoke_user_session')
-      return Response.json(true);
+    if (path === 'rpc/complete_auth_attempt') return Response.json(!options.attemptExpired);
+    if (path === 'rpc/revoke_user_session') return Response.json(true);
+    if (path === 'rpc/complete_pin_reset' && options.resetError)
+      return Response.json({ code: 'P0001', message: options.resetError }, { status: 400 });
+    if (path === 'rpc/complete_pin_reset')
+      return Response.json({ mode: 'normal', expires_at: expires, token_hash: 'PRIVATE' });
     if (path === 'rpc/create_user_session')
       return Response.json({
         expires_at: expires,
@@ -297,4 +303,83 @@ test('가입 재시도도 현재 PIN이 달라졌으면401이며 세션을 발�
   expect(response.status).toBe(401);
   expect(response.headers.has('set-cookie')).toBe(false);
   expect(calls.some((c) => c.path === 'rpc/create_user_session')).toBe(false);
+});
+
+const resetBody = { newPin: '5678', newPinConfirm: '5678' };
+const resetCookie = { cookie: `__Host-jlpt_session=${token}` };
+test('제한 세션 PIN 변경은 현재 버전을 넘기고 새 보안 쿠키·공개 프로필만 반환한다', async () => {
+  const { http, calls } = fixture({ limited: true });
+  const response = await http.completeReset(request('complete-reset', resetBody, resetCookie));
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ data: { profile: expectedData().profile } });
+  const cookie = response.cookies.get('__Host-jlpt_session')!;
+  expect(cookie.value).not.toBe(token);
+  expect(cookie).toMatchObject({ httpOnly: true, secure: true, path: '/', sameSite: 'lax' });
+  const call = calls.find((c) => c.path === 'rpc/complete_pin_reset')!;
+  expect(call.body).toMatchObject({
+    p_token_hash: hashSessionToken(token),
+    p_expected_credential_version: 1,
+    p_new_token_hash: hashSessionToken(cookie.value),
+  });
+  expect(call.body).not.toHaveProperty('newPin');
+  expect(calls.find((c) => c.path === 'rpc/reserve_auth_attempt')?.body?.p_kind).toBe('change_pin');
+});
+test('PIN 변경 무세션·일반 세션·현재와 같은 PIN·확인 불일치는 변경하지 않는다', async () => {
+  for (const [options, body, headers, status, code] of [
+    [{ limited: true }, resetBody, {}, 401, 'UNAUTHORIZED'],
+    [{}, resetBody, resetCookie, 409, 'RESET_NOT_REQUIRED'],
+    [
+      { limited: true },
+      { newPin: '0123', newPinConfirm: '0123' },
+      resetCookie,
+      400,
+      'PIN_UNCHANGED',
+    ],
+    [
+      { limited: true },
+      { ...resetBody, newPinConfirm: '9999' },
+      resetCookie,
+      400,
+      'VALIDATION_ERROR',
+    ],
+    [
+      { limited: true },
+      resetBody,
+      { ...resetCookie, origin: 'https://attacker.example' },
+      403,
+      'ORIGIN_NOT_ALLOWED',
+    ],
+  ] as const) {
+    const { http, calls } = fixture(options);
+    const response = await http.completeReset(request('complete-reset', body, headers));
+    expect(response.status).toBe(status);
+    expect((await response.json()).error.code).toBe(code);
+    expect(calls.some((c) => c.path === 'rpc/complete_pin_reset')).toBe(false);
+  }
+});
+test('PIN 변경 제한429는 해시·변경 전에 반환하며 기존 쿠키를 지우지 않는다', async () => {
+  const { http, calls } = fixture({ limited: true, rateLimited: true });
+  const response = await http.completeReset(request('complete-reset', resetBody, resetCookie));
+  expect(response.status).toBe(429);
+  expect(
+    calls.some((c) => c.path === 'user_credentials' || c.path === 'rpc/complete_pin_reset'),
+  ).toBe(false);
+  expect(response.headers.has('set-cookie')).toBe(false);
+});
+
+test('PIN 변경 도중 세션/예약이 만료되면401, DB 실패는503이며 성공 쿠키가 없다', async () => {
+  for (const [options, status] of [
+    [{ limited: true, resetError: 'UNAUTHORIZED' }, 401],
+    [{ limited: true, resetError: 'PRIVATE_SQL' }, 503],
+    [{ limited: true, attemptExpired: true }, 401],
+  ] as const) {
+    const { http, calls } = fixture(options);
+    const response = await http.completeReset(request('complete-reset', resetBody, resetCookie));
+    expect(response.status).toBe(status);
+    if (status === 401) expect(response.cookies.get('__Host-jlpt_session')?.maxAge).toBe(0);
+    else expect(response.headers.has('set-cookie')).toBe(false);
+    expect(await response.text()).not.toContain('PRIVATE_SQL');
+    if ('attemptExpired' in options)
+      expect(calls.some((c) => c.path === 'rpc/complete_pin_reset')).toBe(false);
+  }
 });

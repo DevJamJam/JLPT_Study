@@ -25,7 +25,7 @@ export type AuthAccount = {
 };
 export type AuthDatabase = {
   reserve(
-    kind: 'login' | 'join',
+    kind: 'login' | 'join' | 'change_pin',
     nicknameHmac: string,
     sourceHmac: string,
   ): Promise<{ allowed: true; attemptId: string } | { allowed: false; retryAt: string }>;
@@ -44,21 +44,13 @@ export type AuthDatabase = {
   ): Promise<{ expiresAt: string; mode: 'normal' | 'change_pin' }>;
 };
 
-/** 공개 응답이 아니다. token은 Route Handler가 HttpOnly 쿠키로만 전달해야 한다. */
-export async function authenticate(
-  kind: 'login' | 'join',
-  input: unknown,
+export async function reserveUserAttempt(
+  kind: 'login' | 'join' | 'change_pin',
+  nicknameKey: string,
   trustedSource: string,
   db: AuthDatabase,
   config: { pepper: string; rateLimitKey: string; idempotencyKey: string },
 ) {
-  if (!input || typeof input !== 'object' || Array.isArray(input))
-    throw new AuthServiceError(400, 'VALIDATION_ERROR');
-  const data = input as Record<string, unknown> | null;
-  const normalized = normalizeNickname(data?.nickname);
-  const joined = kind === 'join' ? validateJoinInput(input) : null;
-  if (!data || !normalized || !isPin(data.pin) || (kind === 'join' && !joined))
-    throw new AuthServiceError(400, 'VALIDATION_ERROR');
   // 출처는 배포 환경이 검증한 서버 값만 전달한다. 요청 body의 IP나 임의 forwarded 헤더를 받지 않는다.
   if (!trustedSource || trustedSource.length > 256)
     throw new AuthServiceError(503, 'AUTH_UNAVAILABLE');
@@ -77,7 +69,7 @@ export async function authenticate(
   try {
     reservation = await db.reserve(
       kind,
-      hmac('jlpt-user-nickname:v1', normalized.nicknameKey),
+      hmac('jlpt-user-nickname:v1', nicknameKey),
       hmac('jlpt-source:v1', trustedSource),
     );
   } catch {
@@ -85,6 +77,31 @@ export async function authenticate(
   }
   if (!reservation.allowed)
     throw new AuthServiceError(429, 'AUTH_RATE_LIMITED', reservation.retryAt);
+  return reservation;
+}
+
+/** 공개 응답이 아니다. token은 Route Handler가 HttpOnly 쿠키로만 전달해야 한다. */
+export async function authenticate(
+  kind: 'login' | 'join',
+  input: unknown,
+  trustedSource: string,
+  db: AuthDatabase,
+  config: { pepper: string; rateLimitKey: string; idempotencyKey: string },
+) {
+  if (!input || typeof input !== 'object' || Array.isArray(input))
+    throw new AuthServiceError(400, 'VALIDATION_ERROR');
+  const data = input as Record<string, unknown> | null;
+  const normalized = normalizeNickname(data?.nickname);
+  const joined = kind === 'join' ? validateJoinInput(input) : null;
+  if (!data || !normalized || !isPin(data.pin) || (kind === 'join' && !joined))
+    throw new AuthServiceError(400, 'VALIDATION_ERROR');
+  const reservation = await reserveUserAttempt(
+    kind,
+    normalized.nicknameKey,
+    trustedSource,
+    db,
+    config,
+  );
   let completed = false;
   const finish = async (outcome: 'success' | 'failure' | 'system_error') => {
     const accepted = await db.complete(reservation.attemptId, outcome);

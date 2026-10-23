@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { authRequest, AuthClientError } from './client';
+import { ResetPinForm } from './ResetPinForm';
 import type { PublicAuthData } from './types';
 import styles from './Auth.module.css';
 
@@ -13,6 +14,7 @@ export function SessionHome() {
   const [error, setError] = useState('');
   const [retry, setRetry] = useState(0);
   const [pending, setPending] = useState(false);
+  const [resetBusy, setResetBusy] = useState(false);
   const inFlight = useRef(false);
   useEffect(() => {
     const controller = new AbortController();
@@ -59,10 +61,21 @@ export function SessionHome() {
                 : `${session.profile.nickname}님, 반가워요`}
             </h1>
             <p className={styles.intro}>
-              {session.profile.mustChangePin ? '관리자에게 문의해주세요.' : session.group.name}
+              {session.profile.mustChangePin
+                ? '새 비밀번호를 정하면 공부방을 다시 이용할 수 있어요.'
+                : session.group.name}
             </p>
+            {session.profile.mustChangePin && (
+              <ResetPinForm
+                onBusyChange={setResetBusy}
+                onComplete={() => {
+                  setSession(null);
+                  setRetry((value) => value + 1);
+                }}
+              />
+            )}
             {!session.profile.mustChangePin && <p>함께 공부하고, 차곡차곡 기록해요.</p>}
-            <Button variant="secondary" onClick={logout} disabled={pending}>
+            <Button variant="secondary" onClick={logout} disabled={pending || resetBusy}>
               {pending ? '로그아웃 중…' : '로그아웃'}
             </Button>
           </>
