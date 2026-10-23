@@ -7,3 +7,4 @@ export * from './request-guard';
 export * from './config';
 export * from './service';
 export * from './supabase-database';
+export * from './http';
