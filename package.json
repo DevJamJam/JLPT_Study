@@ -15,7 +15,9 @@
     "format:check": "prettier --check .",
     "check": "npm run format:check && npm run lint && npm run typecheck",
     "test:e2e": "playwright test",
-    "test:unit": "playwright test --config playwright.unit.config.ts"
+    "test:unit": "playwright test --config playwright.unit.config.ts && npm run test:admin-bootstrap",
+    "admin:init": "node --env-file-if-exists=.env.local scripts/bootstrap-admin.mjs",
+    "test:admin-bootstrap": "node --test tests/server/admin-bootstrap.test.mjs"
   },
   "dependencies": {
     "next": "16.4.0",
