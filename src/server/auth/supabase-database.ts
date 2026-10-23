@@ -1,5 +1,6 @@
 import type { loadAuthConfig } from './config';
 import { SCRYPT_PARAMS } from './crypto';
+import { PROFILE_EMOJIS, normalizeNickname } from '../../features/auth/validation';
 import { AuthServiceError, type AuthAccount, type AuthDatabase } from './service';
 
 const unavailable = () => new AuthServiceError(503, 'AUTH_UNAVAILABLE');
@@ -10,12 +11,21 @@ const object = (value: unknown): value is Record<string, unknown> =>
 const timestamp = (value: unknown): value is string =>
   typeof value === 'string' && Number.isFinite(Date.parse(value));
 
+export type PublicAuthData = {
+  profile: { id: string; nickname: string; emoji: string; mustChangePin: boolean };
+  group: { id: string; name: string; maxMembers: 15; memberCount: number };
+};
+export type UserSessionDatabase = AuthDatabase & {
+  resolveSession(tokenHash: string): Promise<PublicAuthData>;
+  revokeSession(tokenHash: string): Promise<void>;
+};
+
 /** 서버 전용 진입점을 통해 사용한다. groupId는 서버 설정이며 요청 body에서 받지 않는다. */
 export function createSupabaseAuthDatabase(
   config: Pick<ReturnType<typeof loadAuthConfig>, 'supabaseUrl' | 'serviceRoleKey'>,
-  groupId: string,
+  groupId?: string,
   transport: typeof fetch = fetch,
-): AuthDatabase {
+): UserSessionDatabase {
   const base = new URL(config.supabaseUrl);
   if (
     base.protocol !== 'https:' ||
@@ -25,7 +35,7 @@ export function createSupabaseAuthDatabase(
     base.search ||
     base.hash ||
     !config.serviceRoleKey ||
-    !uuid(groupId)
+    (groupId !== undefined && !uuid(groupId))
   )
     throw unavailable();
 
@@ -52,6 +62,7 @@ export function createSupabaseAuthDatabase(
           NICKNAME_TAKEN: 409,
           IDEMPOTENCY_CONFLICT: 409,
           UNAUTHORIZED: 401,
+          PIN_CHANGE_REQUIRED: 403,
         };
         if (
           object(data) &&
@@ -135,6 +146,7 @@ export function createSupabaseAuthDatabase(
     },
     findAccountById,
     async join(input, fingerprint, credential) {
+      if (!groupId) throw unavailable();
       const value = await rpc('complete_join', {
         p_group_id: groupId,
         p_request_id: input.requestId,
@@ -164,6 +176,69 @@ export function createSupabaseAuthDatabase(
       )
         throw unavailable();
       return { expiresAt: row.expires_at, mode: row.mode };
+    },
+    async resolveSession(tokenHash) {
+      const rows = await rpc('resolve_user_session', {
+        p_token_hash: tokenHash,
+        p_allow_change_pin: true,
+      });
+      if (!Array.isArray(rows) || rows.length !== 1) throw unavailable();
+      const row: unknown = rows[0];
+      if (
+        !object(row) ||
+        !uuid(row.user_id) ||
+        !uuid(row.group_id) ||
+        !normalizeNickname(row.nickname) ||
+        typeof row.emoji !== 'string' ||
+        !PROFILE_EMOJIS.some((emoji) => emoji === row.emoji) ||
+        typeof row.must_change_pin !== 'boolean' ||
+        !timestamp(row.expires_at)
+      )
+        throw unavailable();
+      const groupQuery = new URLSearchParams({
+        select: 'id,name,max_members',
+        id: `eq.${row.group_id}`,
+        limit: '1',
+      });
+      const groups = await request(`study_groups?${groupQuery}`);
+      if (!Array.isArray(groups) || groups.length !== 1) throw unavailable();
+      const group: unknown = groups[0];
+      if (
+        !object(group) ||
+        group.id !== row.group_id ||
+        typeof group.name !== 'string' ||
+        !group.name.trim() ||
+        group.max_members !== 15
+      )
+        throw unavailable();
+      const memberQuery = new URLSearchParams({
+        select: 'user_id',
+        group_id: `eq.${row.group_id}`,
+        limit: '16',
+      });
+      const members = await request(`group_members?${memberQuery}`);
+      if (
+        !Array.isArray(members) ||
+        members.length < 1 ||
+        members.length > 15 ||
+        members.some((member) => !object(member) || !uuid(member.user_id))
+      )
+        throw unavailable();
+      if (!members.some((member) => member.user_id === row.user_id))
+        throw new AuthServiceError(401, 'UNAUTHORIZED');
+      return {
+        profile: {
+          id: row.user_id,
+          nickname: row.nickname as string,
+          emoji: row.emoji,
+          mustChangePin: row.must_change_pin,
+        },
+        group: { id: row.group_id, name: group.name, maxMembers: 15, memberCount: members.length },
+      };
+    },
+    async revokeSession(tokenHash) {
+      if ((await rpc('revoke_user_session', { p_token_hash: tokenHash })) !== true)
+        throw unavailable();
     },
   };
 }

@@ -138,3 +138,28 @@ test('가입은 서버 그룹과 기존 RPC 매개변수를 사용한다', async
   });
   expect(body).not.toHaveProperty('pin');
 });
+
+test('세션 조회의 잘못된 행·그룹·정원 응답은 공개 DTO로 내보내지 않는다', async () => {
+  const session = [
+    {
+      user_id: id,
+      group_id: id,
+      nickname: '유리',
+      emoji: '🐰',
+      must_change_pin: false,
+      expires_at: '2099-01-01T00:00:00Z',
+    },
+  ];
+  const group = [{ id, name: '스터디', max_members: 15 }];
+  for (const responses of [
+    [[]],
+    [[{ ...session[0], emoji: '<script>' }]],
+    [session, []],
+    [session, [{ ...group[0], max_members: 16 }]],
+    [session, group, Array.from({ length: 16 }, () => ({ user_id: id }))],
+  ]) {
+    await expect(fake(responses).db.resolveSession('a'.repeat(64))).rejects.toMatchObject({
+      status: 503,
+    });
+  }
+});
