@@ -10,6 +10,9 @@ import { createSupabaseAuthDatabase } from './supabase-database';
 type Environment = Record<string, string | undefined>;
 const messages: Record<string, string> = {
   VALIDATION_ERROR: '닉네임과 네 자리 PIN을 확인해주세요.',
+  GROUP_FULL: '스터디 정원이 가득 찼어요.',
+  NICKNAME_TAKEN: '이미 사용 중인 닉네임이에요.',
+  IDEMPOTENCY_CONFLICT: '가입 요청 내용이 바뀌었어요. 새 요청으로 다시 시도해주세요.',
   INVALID_CREDENTIALS: '닉네임 또는 PIN이 올바르지 않아요.',
   UNAUTHORIZED: '다시 로그인해주세요.',
   AUTH_ATTEMPT_EXPIRED: '로그인 요청이 만료되었어요. 다시 시도해주세요.',
@@ -95,24 +98,26 @@ function clearCookie(response: NextResponse, production: boolean) {
 /** env·전송 함수 주입은 검사용이다. 라우트는 서버 process.env만 전달한다. */
 export function createAuthHttp(env: Environment, transport: typeof fetch = fetch) {
   const production = env.NODE_ENV === 'production';
+  async function auth(kind: 'login' | 'join', request: NextRequest) {
+    try {
+      const config = loadAuthConfig(env);
+      const body = await readMutationJson(request, config.appOrigin);
+      const source = trustedAuthSource(request, env);
+      const db = createSupabaseAuthDatabase(config, undefined, transport);
+      const session = await authenticate(kind, body, source, db, config);
+      const hash = hashSessionToken(session.token)!;
+      const data = await db.resolveSession(hash);
+      const response = json({ data }, kind === 'join' && session.created ? 201 : 200);
+      const { name, options } = sessionCookie(new Date(session.expiresAt), production);
+      response.cookies.set(name, session.token, options);
+      return response;
+    } catch (error) {
+      return failure(error);
+    }
+  }
   return {
-    async login(request: NextRequest) {
-      try {
-        const config = loadAuthConfig(env);
-        const body = await readMutationJson(request, config.appOrigin);
-        const source = trustedAuthSource(request, env);
-        const db = createSupabaseAuthDatabase(config, undefined, transport);
-        const session = await authenticate('login', body, source, db, config);
-        const hash = hashSessionToken(session.token)!;
-        const data = await db.resolveSession(hash);
-        const response = json({ data });
-        const { name, options } = sessionCookie(new Date(session.expiresAt), production);
-        response.cookies.set(name, session.token, options);
-        return response;
-      } catch (error) {
-        return failure(error);
-      }
-    },
+    login: (request: NextRequest) => auth('login', request),
+    join: (request: NextRequest) => auth('join', request),
     async me(request: NextRequest) {
       try {
         const hash = tokenHash(request, production);

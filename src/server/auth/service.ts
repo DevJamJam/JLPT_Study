@@ -36,7 +36,7 @@ export type AuthDatabase = {
     input: NonNullable<ReturnType<typeof validateJoinInput>>,
     fingerprint: string,
     credential: PinCredential,
-  ): Promise<string>;
+  ): Promise<{ userId: string; created: boolean }>;
   createSession(
     id: string,
     expectedVersion: number,
@@ -93,11 +93,17 @@ export async function authenticate(
   };
   try {
     let account: AuthAccount | null;
+    let created = false;
     if (joined) {
       const credential = await hashPin(joined.pin, config.pepper);
-      const id = await db.join(joined, joinFingerprint(joined, config.idempotencyKey), credential);
+      const result = await db.join(
+        joined,
+        joinFingerprint(joined, config.idempotencyKey),
+        credential,
+      );
+      created = result.created;
       // 재전송도 현재 자격증명을 다시 읽고 PIN을 검증한다.
-      account = await db.findAccountById(id);
+      account = await db.findAccountById(result.userId);
     } else {
       account = await db.findAccount(normalized.nicknameKey);
     }
@@ -116,6 +122,7 @@ export async function authenticate(
       expiresAt: session.expiresAt,
       mustChangePin: session.mode === 'change_pin',
       userId: account.id,
+      created,
     };
   } catch (error) {
     if (!completed) {

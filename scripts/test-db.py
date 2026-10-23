@@ -34,6 +34,7 @@ for migration in sorted((ROOT / "supabase/migrations").glob("*.sql")):
 run((ROOT / "tests/db/contracts.sql").read_text())
 
 run((ROOT / "tests/db/auth-contracts.sql").read_text())
+run((ROOT / "tests/db/join-result-contracts.sql").read_text())
 run((ROOT / "tests/db/auth-limit-contracts.sql").read_text())
 
 
@@ -69,4 +70,10 @@ check_race("tests/db/join-concurrent-first.sql", "tests/db/join-concurrent-secon
 assert run("select count(*) from public.group_members where group_id = '40000000-0000-0000-0000-000000000001';") == "15"
 check_race("tests/db/auth-limit-concurrent-first.sql", "tests/db/auth-limit-concurrent-second.sql", "AUTH_LIMIT_EXPECTED")
 assert run("select count(*) from public.auth_attempts where nickname_hmac = repeat('1',64) and outcome='pending';") == "5"
-print("PASS: PostgreSQL 스키마·권한·기록 계약·동시 저장 상한·가입·세션·동시 가입 정원")
+
+run("insert into public.study_groups(id,name) values ('52000000-0000-4000-8000-000000000001','동시 가입 재시도 검사');")
+check_race("tests/db/join-result-concurrent-first.sql", "tests/db/join-result-concurrent-second.sql", "JOIN_RETRY_EXPECTED")
+if run("select count(*) from public.group_members where group_id='52000000-0000-4000-8000-000000000001';") != "1":
+    raise AssertionError("같은 가입 요청의 동시 재시도는 한 명만 생성해야 합니다.")
+
+print("PASS: PostgreSQL 스키마·권한·기록 계약·동시 저장 상한·가입·세션·동시 가입 정원·가입 재시도 결과")

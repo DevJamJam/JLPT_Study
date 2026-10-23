@@ -35,7 +35,14 @@ function request(action: string, body?: unknown, headers: Record<string, string>
   });
 }
 function fixture(
-  options: { limited?: boolean; missing?: boolean; rateLimited?: boolean; failure?: string } = {},
+  options: {
+    limited?: boolean;
+    missing?: boolean;
+    rateLimited?: boolean;
+    failure?: string;
+    created?: boolean;
+    joinError?: string;
+  } = {},
 ) {
   const calls: {
     path: string;
@@ -55,6 +62,10 @@ function fixture(
           ? { allowed: false, retryAt: expires }
           : { allowed: true, attemptId: id },
       );
+    if (path === 'rpc/complete_join_result')
+      return options.joinError
+        ? Response.json({ code: 'P0001', message: options.joinError }, { status: 400 })
+        : Response.json({ userId: id, created: options.created ?? true });
     if (path === 'users') return Response.json(options.missing ? [] : [{ id }]);
     if (path === 'user_credentials')
       return Response.json([
@@ -240,4 +251,50 @@ test('비밀 설정 누락은 입력이나 비밀을 드러내지 않고 503으�
   );
   expect(response.status).toBe(503);
   expect((await response.json()).error.code).toBe('AUTH_NOT_CONFIGURED');
+});
+
+const joinBody = { ...loginBody, pinConfirm: '0123', emoji: '🐰', requestId: id };
+test('가입 신규201·재시도200, 같은 공개 DTO·새 쿠키·서버 그룹을 사용한다', async () => {
+  for (const created of [true, false]) {
+    const { http, calls } = fixture({ created });
+    const response = await http.join(request('join', { ...joinBody, groupId: 'client-group' }));
+    expect(response.status).toBe(created ? 201 : 200);
+    expect(await response.json()).toEqual({ data: expectedData() });
+    expect(response.cookies.get('__Host-jlpt_session')?.value).toMatch(/^[A-Za-z0-9_-]{43}$/);
+    expect(calls.find((c) => c.path === 'rpc/complete_join_result')?.body).toMatchObject({
+      p_group_id: groupId,
+      p_request_id: id,
+    });
+    expect(calls[0].body?.p_kind).toBe('join');
+  }
+});
+test('가입 업무 오류409를 구분하고 세션을 만들지 않는다', async () => {
+  for (const joinError of ['GROUP_FULL', 'NICKNAME_TAKEN', 'IDEMPOTENCY_CONFLICT']) {
+    const { http, calls } = fixture({ joinError });
+    const response = await http.join(request('join', joinBody));
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe(joinError);
+    expect(response.headers.has('set-cookie')).toBe(false);
+    expect(calls.some((c) => c.path === 'rpc/create_user_session')).toBe(false);
+  }
+});
+test('가입 PIN 확인·이모지·요청 ID 검증 실패는 DB 예약 전 차단한다', async () => {
+  for (const body of [
+    { ...joinBody, pinConfirm: '9999' },
+    { ...joinBody, emoji: 'INVALID' },
+    { ...joinBody, requestId: 'bad' },
+  ]) {
+    const { http, calls } = fixture();
+    expect((await http.join(request('join', body))).status).toBe(400);
+    expect(calls).toHaveLength(0);
+  }
+});
+test('가입 재시도도 현재 PIN이 달라졌으면401이며 세션을 발급하지 않는다', async () => {
+  const { http, calls } = fixture({ created: false });
+  const response = await http.join(
+    request('join', { ...joinBody, pin: '9999', pinConfirm: '9999' }),
+  );
+  expect(response.status).toBe(401);
+  expect(response.headers.has('set-cookie')).toBe(false);
+  expect(calls.some((c) => c.path === 'rpc/create_user_session')).toBe(false);
 });

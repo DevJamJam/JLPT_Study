@@ -33,7 +33,7 @@ function database(account: AuthAccount | null) {
     },
     join: async () => {
       calls.push('join');
-      return 'user-id';
+      return { userId: 'user-id', created: false };
     },
     createSession: async (_id, version, hash) => {
       calls.push('session');
