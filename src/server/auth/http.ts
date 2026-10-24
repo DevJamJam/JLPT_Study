@@ -102,14 +102,18 @@ function clearCookie(response: NextResponse, production: boolean) {
 }
 
 /** env·전송 함수 주입은 검사용이다. 라우트는 서버 process.env만 전달한다. */
-export function createAuthHttp(env: Environment, transport: typeof fetch = fetch) {
+function createAuthHandlers(
+  env: Environment,
+  transport: typeof fetch,
+  observeRequest: (milliseconds: number) => void,
+) {
   const production = env.NODE_ENV === 'production';
   async function auth(kind: 'login' | 'join', request: NextRequest) {
     try {
       const config = loadAuthConfig(env);
       const body = await readMutationJson(request, config.appOrigin);
       const source = trustedAuthSource(request, env);
-      const db = createSupabaseAuthDatabase(config, undefined, transport);
+      const db = createSupabaseAuthDatabase(config, undefined, transport, observeRequest);
       const session = await authenticate(kind, body, source, db, config);
       const hash = hashSessionToken(session.token)!;
       const data = await db.resolveSession(hash);
@@ -127,7 +131,7 @@ export function createAuthHttp(env: Environment, transport: typeof fetch = fetch
       const body = await readMutationJson(request, config.appOrigin);
       const hash = tokenHash(request, production);
       if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
-      const db = createSupabaseAuthDatabase(config, undefined, transport);
+      const db = createSupabaseAuthDatabase(config, undefined, transport, observeRequest);
       const result = await changePin(mode, body, hash, trustedAuthSource(request, env), db, config);
       const response = json({ data: { profile: result.profile } });
       const { name, options } = sessionCookie(new Date(result.expiresAt), production);
@@ -151,7 +155,7 @@ export function createAuthHttp(env: Environment, transport: typeof fetch = fetch
         const hash = tokenHash(request, production);
         if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
         if (!isProfileEmoji(body.emoji)) throw new AuthServiceError(400, 'VALIDATION_ERROR');
-        const db = createSupabaseAuthDatabase(config, undefined, transport);
+        const db = createSupabaseAuthDatabase(config, undefined, transport, observeRequest);
         return json({ data: { profile: await db.updateEmoji(hash, body.emoji) } });
       } catch (error) {
         const response = failure(error);
@@ -163,7 +167,12 @@ export function createAuthHttp(env: Environment, transport: typeof fetch = fetch
       try {
         const hash = tokenHash(request, production);
         if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
-        const db = createSupabaseAuthDatabase(loadAuthConfig(env), undefined, transport);
+        const db = createSupabaseAuthDatabase(
+          loadAuthConfig(env),
+          undefined,
+          transport,
+          observeRequest,
+        );
         return json({ data: await db.resolveSession(hash) });
       } catch (error) {
         const response = failure(error);
@@ -177,7 +186,12 @@ export function createAuthHttp(env: Environment, transport: typeof fetch = fetch
         await readMutationJson(request, config.appOrigin);
         const hash = tokenHash(request, production);
         if (hash)
-          await createSupabaseAuthDatabase(config, undefined, transport).revokeSession(hash);
+          await createSupabaseAuthDatabase(
+            config,
+            undefined,
+            transport,
+            observeRequest,
+          ).revokeSession(hash);
         const response = json({ data: { loggedOut: true } });
         clearCookie(response, production);
         return response;
@@ -186,4 +200,28 @@ export function createAuthHttp(env: Environment, transport: typeof fetch = fetch
       }
     },
   };
+}
+
+/** 요청별 숫자 합계만 노출한다. 경로·입력·PIN·쿠키·SQL은 기록하지 않는다. */
+export function createAuthHttp(env: Environment, transport: typeof fetch = fetch) {
+  type Handlers = ReturnType<typeof createAuthHandlers>;
+  const handlers = {} as Handlers;
+  const names = Object.keys(createAuthHandlers(env, transport, () => {})) as (keyof Handlers)[];
+  for (const name of names) {
+    handlers[name] = async (request: NextRequest) => {
+      const started = performance.now();
+      let dbMilliseconds = 0;
+      let dbCalls = 0;
+      const response = await createAuthHandlers(env, transport, (milliseconds) => {
+        dbMilliseconds += milliseconds;
+        dbCalls++;
+      })[name](request);
+      response.headers.set(
+        'Server-Timing',
+        `app;dur=${(performance.now() - started).toFixed(1)}, db;dur=${dbMilliseconds.toFixed(1)}, dbcalls;desc="${dbCalls}"`,
+      );
+      return response;
+    };
+  }
+  return handlers;
 }

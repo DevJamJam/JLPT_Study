@@ -525,3 +525,33 @@ test('이모지 RPC의 제한·만료·무효 입력·실패·잘못된 응답�
     else expect(response.headers.has('set-cookie')).toBe(false);
   }
 });
+
+test('서버 시간 지표는 요청별 숫자만 포함하고 동시 요청 사이에서 누적되지 않는다', async () => {
+  const { http } = fixture();
+  const [saved, missing] = await Promise.all([
+    http.updateEmoji(emojiRequest({ emoji: '🐱' })),
+    http.me(request('me')),
+  ]);
+  expect(saved.headers.get('server-timing')).toMatch(
+    /^app;dur=\d+\.\d, db;dur=\d+\.\d, dbcalls;desc="1"$/,
+  );
+  expect(missing.headers.get('server-timing')).toMatch(
+    /^app;dur=\d+\.\d, db;dur=0\.0, dbcalls;desc="0"$/,
+  );
+  const next = await http.me(request('me'));
+  expect(next.headers.get('server-timing')).toContain('dbcalls;desc="0"');
+  for (const response of [saved, missing, next]) {
+    const timing = response.headers.get('server-timing')!;
+    for (const secret of [token, env.PIN_PEPPER, env.SUPABASE_SECRET_KEY, id])
+      expect(timing).not.toContain(secret);
+    expect(response.headers.get('cache-control')).toContain('no-store');
+  }
+});
+test('실패한 DB 요청도 시간 지표에 포함하되 오류 원문은 노출하지 않는다', async () => {
+  const { http } = fixture({ emojiError: 'PRIVATE_DATABASE_ERROR' });
+  const response = await http.updateEmoji(emojiRequest({ emoji: '🐱' }));
+  expect(response.status).toBe(503);
+  expect(response.headers.get('server-timing')).toContain('dbcalls;desc="1"');
+  expect(response.headers.get('server-timing')).not.toContain('PRIVATE_DATABASE_ERROR');
+  expect(await response.text()).not.toContain('PRIVATE_DATABASE_ERROR');
+});
