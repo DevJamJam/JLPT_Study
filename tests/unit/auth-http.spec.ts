@@ -43,6 +43,8 @@ function fixture(
     created?: boolean;
     joinError?: string;
     resetError?: string;
+    emojiError?: string;
+    badEmojiResult?: boolean;
     attemptExpired?: boolean;
   } = {},
 ) {
@@ -85,6 +87,23 @@ function fixture(
       return Response.json({ code: 'P0001', message: options.resetError }, { status: 400 });
     if (path === 'rpc/complete_pin_reset' || path === 'rpc/change_user_pin')
       return Response.json({ mode: 'normal', expires_at: expires, token_hash: 'PRIVATE' });
+    if (path === 'rpc/update_profile_emoji') {
+      if (options.emojiError)
+        return Response.json({ code: 'P0001', message: options.emojiError }, { status: 400 });
+      return Response.json(
+        options.badEmojiResult
+          ? [{ user_id: id, emoji: '🦄' }]
+          : [
+              {
+                user_id: id,
+                nickname: '유리',
+                emoji: body?.p_emoji,
+                must_change_pin: false,
+                pin_hash: 'PRIVATE',
+              },
+            ],
+      );
+    }
     if (path === 'rpc/create_user_session')
       return Response.json({
         expires_at: expires,
@@ -449,5 +468,60 @@ test('일반 PIN 변경의 제한·만료·DB 실패·무세션·출처 오류�
       expect(
         calls.some((c) => c.path === 'user_credentials' || c.path === 'rpc/change_user_pin'),
       ).toBe(false);
+  }
+});
+
+function emojiRequest(body: unknown, headers: Record<string, string> = resetCookie) {
+  return new NextRequest(`${origin}/api/me/emoji`, {
+    method: 'PATCH',
+    headers: { origin, 'content-type': 'application/json', ...headers },
+    body: JSON.stringify(body),
+  });
+}
+test('이모지 변경은 쿠키 해시와 고정 선택지만 RPC에 보내며 공개 프로필만 반환한다', async () => {
+  const { http, calls } = fixture();
+  const response = await http.updateEmoji(
+    emojiRequest({ emoji: '🐱', userId: groupId, nickname: '다른이름' }),
+  );
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({
+    data: { profile: { ...expectedData().profile, emoji: '🐱' } },
+  });
+  expect(calls).toHaveLength(1);
+  expect(calls[0]).toMatchObject({
+    path: 'rpc/update_profile_emoji',
+    body: { p_token_hash: hashSessionToken(token), p_emoji: '🐱' },
+  });
+  expect(response.headers.has('set-cookie')).toBe(false);
+  expect(response.headers.get('cache-control')).toContain('no-store');
+});
+test('이모지 변경의 무세션·관리자 쿠키·무효 값·출처 오류는 DB에 전달하지 않는다', async () => {
+  for (const [body, headers, status] of [
+    [{ emoji: '🐱' }, {}, 401],
+    [{ emoji: '🐱' }, { cookie: `__Host-jlpt_admin_session=${token}` }, 401],
+    [{ emoji: '🦄' }, resetCookie, 400],
+    [{ emoji: null }, resetCookie, 400],
+    [{ emoji: '🐱' }, { ...resetCookie, origin: 'https://attacker.example' }, 403],
+  ] as const) {
+    const { http, calls } = fixture();
+    const response = await http.updateEmoji(emojiRequest(body, headers));
+    expect(response.status).toBe(status);
+    expect(calls).toHaveLength(0);
+  }
+});
+test('이모지 RPC의 제한·만료·무효 입력·실패·잘못된 응답은 성공으로 처리하지 않는다', async () => {
+  for (const [options, status, code] of [
+    [{ emojiError: 'PIN_CHANGE_REQUIRED' }, 403, 'PIN_CHANGE_REQUIRED'],
+    [{ emojiError: 'UNAUTHORIZED' }, 401, 'UNAUTHORIZED'],
+    [{ emojiError: 'VALIDATION_ERROR' }, 400, 'VALIDATION_ERROR'],
+    [{ emojiError: 'PRIVATE_SQL' }, 503, 'AUTH_UNAVAILABLE'],
+    [{ badEmojiResult: true }, 503, 'AUTH_UNAVAILABLE'],
+  ] as const) {
+    const { http } = fixture(options);
+    const response = await http.updateEmoji(emojiRequest({ emoji: '🐱' }));
+    expect(response.status).toBe(status);
+    expect((await response.json()).error.code).toBe(code);
+    if (status === 401) expect(response.cookies.get('__Host-jlpt_session')?.maxAge).toBe(0);
+    else expect(response.headers.has('set-cookie')).toBe(false);
   }
 });

@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
+import { EmojiPicker } from './EmojiPicker';
 import { PROFILE_EMOJIS, isPin, normalizeNickname } from './validation';
 import { authErrorMessage, authRequest } from './client';
 import styles from './Auth.module.css';
@@ -129,24 +130,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'join' }) {
                     onChange={(e) => setPinConfirm(e.target.value)}
                   />
                 </label>
-                <fieldset className={styles.emojiField}>
-                  <legend>나를 나타낼 이모티콘</legend>
-                  <div className={styles.emojiGrid}>
-                    {PROFILE_EMOJIS.map((value, index) => (
-                      <label className={styles.emojiOption} key={value}>
-                        <input
-                          type="radio"
-                          name="emoji"
-                          value={value}
-                          checked={emoji === value}
-                          onChange={() => setEmoji(value)}
-                          aria-label={`대표 이모티콘 ${index + 1}: ${value}`}
-                        />
-                        <span aria-hidden="true">{value}</span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
+                <EmojiPicker value={emoji} onChange={setEmoji} />
                 <label className={styles.consent}>
                   <input
                     type="checkbox"

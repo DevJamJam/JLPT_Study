@@ -22,8 +22,24 @@ export async function authRequest<Path extends keyof AuthResponses>(
   body?: unknown,
   signal?: AbortSignal,
 ) {
-  const response = await fetch(`/api/auth/${path}`, {
-    method: body === undefined ? 'GET' : 'POST',
+  return jsonRequest<AuthResponses[Path]>(`/api/auth/${path}`, body, signal);
+}
+export function updateProfileEmoji(emoji: string) {
+  return jsonRequest<Pick<PublicAuthData, 'profile'>>(
+    '/api/me/emoji',
+    { emoji },
+    undefined,
+    'PATCH',
+  );
+}
+async function jsonRequest<Data>(
+  path: string,
+  body?: unknown,
+  signal?: AbortSignal,
+  method?: 'PATCH',
+) {
+  const response = await fetch(path, {
+    method: method ?? (body === undefined ? 'GET' : 'POST'),
     credentials: 'same-origin',
     cache: 'no-store',
     headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
@@ -37,7 +53,7 @@ export async function authRequest<Path extends keyof AuthResponses>(
       typeof json.error?.code === 'string' ? json.error.code : 'AUTH_UNAVAILABLE',
       json.error?.retryAt,
     );
-  return json.data as AuthResponses[Path];
+  return json.data as Data;
 }
 export function authErrorMessage(error: unknown) {
   const messages: Record<string, string> = {

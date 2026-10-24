@@ -1,7 +1,7 @@
 import type { PublicAuthData } from '../../features/auth/types';
 import type { loadAuthConfig } from './config';
 import { SCRYPT_PARAMS, type PinCredential } from './crypto';
-import { PROFILE_EMOJIS, normalizeNickname } from '../../features/auth/validation';
+import { isProfileEmoji, normalizeNickname } from '../../features/auth/validation';
 import { AuthServiceError, type AuthAccount, type AuthDatabase } from './service';
 
 const unavailable = () => new AuthServiceError(503, 'AUTH_UNAVAILABLE');
@@ -12,9 +12,27 @@ const object = (value: unknown): value is Record<string, unknown> =>
 const timestamp = (value: unknown): value is string =>
   typeof value === 'string' && Number.isFinite(Date.parse(value));
 
+function publicProfile(row: unknown): PublicAuthData['profile'] {
+  if (
+    !object(row) ||
+    !uuid(row.user_id) ||
+    !normalizeNickname(row.nickname) ||
+    !isProfileEmoji(row.emoji) ||
+    typeof row.must_change_pin !== 'boolean'
+  )
+    throw unavailable();
+  return {
+    id: row.user_id,
+    nickname: row.nickname as string,
+    emoji: row.emoji,
+    mustChangePin: row.must_change_pin,
+  };
+}
+
 export type { PublicAuthData } from '../../features/auth/types';
 export type UserSessionDatabase = AuthDatabase & {
   resolveSession(tokenHash: string): Promise<PublicAuthData>;
+  updateEmoji(tokenHash: string, emoji: string): Promise<PublicAuthData['profile']>;
   revokeSession(tokenHash: string): Promise<void>;
   replacePin(
     mode: 'reset' | 'normal',
@@ -69,6 +87,7 @@ export function createSupabaseAuthDatabase(
           UNAUTHORIZED: 401,
           PIN_CHANGE_REQUIRED: 403,
           RESET_NOT_REQUIRED: 409,
+          VALIDATION_ERROR: 400,
         };
         if (
           object(data) &&
@@ -203,17 +222,8 @@ export function createSupabaseAuthDatabase(
       });
       if (!Array.isArray(rows) || rows.length !== 1) throw unavailable();
       const row: unknown = rows[0];
-      if (
-        !object(row) ||
-        !uuid(row.user_id) ||
-        !uuid(row.group_id) ||
-        !normalizeNickname(row.nickname) ||
-        typeof row.emoji !== 'string' ||
-        !PROFILE_EMOJIS.some((emoji) => emoji === row.emoji) ||
-        typeof row.must_change_pin !== 'boolean' ||
-        !timestamp(row.expires_at)
-      )
-        throw unavailable();
+      if (!object(row) || !uuid(row.group_id) || !timestamp(row.expires_at)) throw unavailable();
+      const profile = publicProfile(row);
       const groupQuery = new URLSearchParams({
         select: 'id,name,max_members',
         id: `eq.${row.group_id}`,
@@ -246,12 +256,7 @@ export function createSupabaseAuthDatabase(
       if (!members.some((member) => member.user_id === row.user_id))
         throw new AuthServiceError(401, 'UNAUTHORIZED');
       return {
-        profile: {
-          id: row.user_id,
-          nickname: row.nickname as string,
-          emoji: row.emoji,
-          mustChangePin: row.must_change_pin,
-        },
+        profile,
         group: { id: row.group_id, name: group.name, maxMembers: 15, memberCount: members.length },
       };
     },
@@ -267,6 +272,13 @@ export function createSupabaseAuthDatabase(
       const row: unknown = Array.isArray(value) && value.length === 1 ? value[0] : value;
       if (!object(row) || row.mode !== 'normal' || !timestamp(row.expires_at)) throw unavailable();
       return { expiresAt: row.expires_at };
+    },
+    async updateEmoji(tokenHash, emoji) {
+      const rows = await rpc('update_profile_emoji', { p_token_hash: tokenHash, p_emoji: emoji });
+      if (!Array.isArray(rows) || rows.length !== 1) throw unavailable();
+      const profile = publicProfile(rows[0]);
+      if (profile.mustChangePin || profile.emoji !== emoji) throw unavailable();
+      return profile;
     },
     async revokeSession(tokenHash) {
       if ((await rpc('revoke_user_session', { p_token_hash: tokenHash })) !== true)
