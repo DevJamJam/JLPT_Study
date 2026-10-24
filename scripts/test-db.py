@@ -37,6 +37,7 @@ run((ROOT / "tests/db/auth-contracts.sql").read_text())
 run((ROOT / "tests/db/join-result-contracts.sql").read_text())
 run((ROOT / "tests/db/complete-reset-contracts.sql").read_text())
 run((ROOT / "tests/db/change-pin-contracts.sql").read_text())
+run((ROOT / "tests/db/profile-emoji-contracts.sql").read_text())
 run((ROOT / "tests/db/auth-limit-contracts.sql").read_text())
 
 
@@ -90,3 +91,8 @@ check_race("tests/db/change-pin-concurrent-first.sql", "tests/db/change-pin-conc
 assert run("select credential_version from public.user_credentials where user_id='64000000-0000-4000-8000-000000000002';") == "2"
 assert run("select count(*) from public.sessions where user_id='64000000-0000-4000-8000-000000000002';") == "1"
 print("PASS: 일반 PIN change transaction and concurrency")
+
+run((ROOT / "tests/db/profile-emoji-concurrent-setup.sql").read_text())
+check_race("tests/db/profile-emoji-concurrent-first.sql", "tests/db/profile-emoji-concurrent-second.sql", "UNAUTHORIZED")
+assert run("select emoji from public.users where id='67000000-0000-4000-8000-000000000002';") == "🐰"
+print("PASS: PIN 변경과 이모지 저장 경합 차단")

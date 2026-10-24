@@ -21,6 +21,10 @@ export const PROFILE_EMOJIS = [
   '⭐',
 ] as const;
 
+export function isProfileEmoji(value: unknown): value is (typeof PROFILE_EMOJIS)[number] {
+  return PROFILE_EMOJIS.some((emoji) => emoji === value);
+}
+
 export function isPin(value: unknown): value is string {
   return typeof value === 'string' && value.length === 4 && /^[0-9]{4}$/.test(value);
 }
@@ -49,7 +53,7 @@ export function validateJoinInput(input: unknown) {
     typeof data.requestId !== 'string' ||
     data.requestId.length !== 36 ||
     !/^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(data.requestId) ||
-    !PROFILE_EMOJIS.some((emoji) => emoji === data.emoji)
+    !isProfileEmoji(data.emoji)
   )
     return null;
   return {

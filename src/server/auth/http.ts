@@ -1,3 +1,4 @@
+import { isProfileEmoji } from '../../features/auth/validation';
 import { isIP } from 'node:net';
 import { NextRequest, NextResponse } from 'next/server';
 import { AuthConfigError, loadAuthConfig } from './config';
@@ -143,6 +144,21 @@ export function createAuthHttp(env: Environment, transport: typeof fetch = fetch
     join: (request: NextRequest) => auth('join', request),
     completeReset: (request: NextRequest) => updatePin('reset', request),
     changePin: (request: NextRequest) => updatePin('normal', request),
+    async updateEmoji(request: NextRequest) {
+      try {
+        const config = loadAuthConfig(env);
+        const body = await readMutationJson(request, config.appOrigin);
+        const hash = tokenHash(request, production);
+        if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
+        if (!isProfileEmoji(body.emoji)) throw new AuthServiceError(400, 'VALIDATION_ERROR');
+        const db = createSupabaseAuthDatabase(config, undefined, transport);
+        return json({ data: { profile: await db.updateEmoji(hash, body.emoji) } });
+      } catch (error) {
+        const response = failure(error);
+        if (response.status === 401) clearCookie(response, production);
+        return response;
+      }
+    },
     async me(request: NextRequest) {
       try {
         const hash = tokenHash(request, production);
