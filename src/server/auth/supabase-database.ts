@@ -48,6 +48,7 @@ export function createSupabaseAuthDatabase(
   config: Pick<ReturnType<typeof loadAuthConfig>, 'supabaseUrl' | 'serviceRoleKey'>,
   groupId?: string,
   transport: typeof fetch = fetch,
+  observeRequest?: (milliseconds: number) => void,
 ): UserSessionDatabase {
   const base = new URL(config.supabaseUrl);
   if (
@@ -63,6 +64,7 @@ export function createSupabaseAuthDatabase(
     throw unavailable();
 
   async function request(path: string, body?: Record<string, unknown>): Promise<unknown> {
+    const started = performance.now();
     try {
       const headers: Record<string, string> = { apikey: config.serviceRoleKey };
       // 새 secret 키는 JWT가 아니다. legacy service_role JWT만 Bearer로 전달한다.
@@ -102,6 +104,8 @@ export function createSupabaseAuthDatabase(
     } catch (error) {
       if (error instanceof AuthServiceError) throw error;
       throw unavailable();
+    } finally {
+      observeRequest?.(performance.now() - started);
     }
   }
   const rpc = (name: string, body: Record<string, unknown>) => request(`rpc/${name}`, body);
