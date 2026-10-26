@@ -111,6 +111,7 @@ export async function authenticate(
   try {
     let account: AuthAccount | null;
     let created = false;
+    let verifiedNewAccount = false;
     if (joined) {
       const credential = await hashPin(joined.pin, config.pepper);
       const result = await db.join(
@@ -119,14 +120,22 @@ export async function authenticate(
         credential,
       );
       created = result.created;
-      // 재전송도 현재 자격증명을 다시 읽고 PIN을 검증한다.
-      account = await db.findAccountById(result.userId);
+      if (result.created) {
+        // 이 트랜잭션에서 방금 생성한 해시다. 최종 세션 RPC가 버전1을 재검사한다.
+        account = { id: result.userId, credentialVersion: 1, credential };
+        verifiedNewAccount = true;
+      } else {
+        // 기존 가입 요청 재전송은 현재 자격증명을 다시 읽고 PIN을 검증한다.
+        account = await db.findAccountById(result.userId);
+      }
     } else {
       account = await db.findAccount(normalized.nicknameKey);
     }
-    const valid = account
-      ? await verifyPin(data.pin, account.credential, config.pepper)
-      : await verifyMissingAccount(data.pin, config.pepper);
+    const valid =
+      verifiedNewAccount ||
+      (account
+        ? await verifyPin(data.pin, account.credential, config.pepper)
+        : await verifyMissingAccount(data.pin, config.pepper));
     if (!valid || !account) {
       await finish('failure');
       throw new AuthServiceError(401, 'INVALID_CREDENTIALS');

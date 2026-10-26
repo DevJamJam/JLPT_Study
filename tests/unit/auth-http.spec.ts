@@ -70,7 +70,23 @@ function fixture(
       return options.joinError
         ? Response.json({ code: 'P0001', message: options.joinError }, { status: 400 })
         : Response.json({ userId: id, created: options.created ?? true });
-    if (path === 'users') return Response.json(options.missing ? [] : [{ id }]);
+    if (path === 'users')
+      return Response.json(
+        options.missing
+          ? []
+          : [
+              {
+                id,
+                credential: {
+                  user_id: id,
+                  pin_hash: credential.hash,
+                  salt: credential.salt,
+                  hash_params: credential.params,
+                  credential_version: 1,
+                },
+              },
+            ],
+      );
     if (path === 'user_credentials')
       return Response.json([
         {

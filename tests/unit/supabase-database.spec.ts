@@ -29,17 +29,19 @@ test('RPC 예약·완료는 서버 키와 제한된 전송 설정을 사용한�
   expect(JSON.parse(calls[1].init.body as string)).toEqual({ p_id: id, p_outcome: 'success' });
 });
 
-test('계정 조회는 현재 버전을 읽고 DB 행의 추가 필드를 제거한다', async () => {
+test('계정과 현재 자격증명은 한 요청으로 읽고 추가 필드를 제거한다', async () => {
   const { db, calls } = fake([
-    [{ id }],
     [
       {
-        user_id: id,
-        pin_hash: 'a'.repeat(64),
-        salt: Buffer.alloc(16).toString('base64'),
-        hash_params: SCRYPT_PARAMS,
-        credential_version: 2,
-        private_field: 'secret',
+        id,
+        credential: {
+          user_id: id,
+          pin_hash: 'a'.repeat(64),
+          salt: Buffer.alloc(16).toString('base64'),
+          hash_params: SCRYPT_PARAMS,
+          credential_version: 2,
+          private_field: 'secret',
+        },
       },
     ],
   ]);
@@ -52,8 +54,9 @@ test('계정 조회는 현재 버전을 읽고 DB 행의 추가 필드를 제거
       params: SCRYPT_PARAMS,
     },
   });
+  expect(calls).toHaveLength(1);
   expect(calls[0].url.searchParams.get('nickname_key')).toBe('eq.닉,네임');
-  expect(calls[1].url.searchParams.get('user_id')).toBe(`eq.${id}`);
+  expect(calls[0].url.searchParams.get('select')).toContain('credential:user_credentials!inner');
 });
 
 test('세션은 버전 검증 RPC를 사용하며 토큰 해시를 반환하지 않는다', async () => {
@@ -195,4 +198,56 @@ test('가입 그룹은 서버 단일 스터디에서 도출하고 여러 그룹�
   await expect(
     fake([{ userId: id, created: 'true' }]).db.join(input, 'b'.repeat(64), credential),
   ).rejects.toMatchObject({ status: 503 });
+});
+
+test('중첩 자격증명의 모양·사용자·해시 검증이 실패하면 추가 조회 없이 닫힌다', async () => {
+  for (const credential of [
+    null,
+    [],
+    { user_id: '00000000-0000-4000-8000-000000000099' },
+    {
+      user_id: id,
+      pin_hash: 'plain',
+      salt: Buffer.alloc(16).toString('base64'),
+      hash_params: SCRYPT_PARAMS,
+      credential_version: 1,
+    },
+  ]) {
+    const { db, calls } = fake([[{ id, credential }]]);
+    await expect(db.findAccount('토끼')).rejects.toMatchObject({ code: 'AUTH_UNAVAILABLE' });
+    expect(calls).toHaveLength(1);
+  }
+  expect(await fake([[]]).db.findAccount('없는계정')).toBeNull();
+});
+test('세션 확인 뒤 독립적인 그룹·멤버 조회는 서로의 응답을 기다리지 않는다', async () => {
+  let releaseGroup: (response: Response) => void = () => {};
+  let groupStarted = false;
+  const transport: typeof fetch = async (input) => {
+    const path = new URL(String(input)).pathname;
+    if (path.endsWith('resolve_user_session'))
+      return Response.json([
+        {
+          user_id: id,
+          group_id: id,
+          nickname: '토끼',
+          emoji: '🐰',
+          must_change_pin: false,
+          expires_at: '2099-01-01T00:00:00Z',
+        },
+      ]);
+    if (path.endsWith('study_groups')) {
+      groupStarted = true;
+      return new Promise<Response>((resolve) => {
+        releaseGroup = resolve;
+      });
+    }
+    if (path.endsWith('group_members')) {
+      expect(groupStarted).toBe(true);
+      releaseGroup(Response.json([{ id, name: '공부방', max_members: 15 }]));
+      return Response.json([{ user_id: id }]);
+    }
+    throw new Error('Unexpected request');
+  };
+  const db = createSupabaseAuthDatabase(config, undefined, transport);
+  expect((await db.resolveSession('a'.repeat(64))).group.memberCount).toBe(1);
 });
