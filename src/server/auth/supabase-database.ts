@@ -29,6 +29,30 @@ function publicProfile(row: unknown): PublicAuthData['profile'] {
   };
 }
 
+function accountFromRow(row: unknown, id: string): AuthAccount {
+  if (
+    !object(row) ||
+    row.user_id !== id ||
+    typeof row.pin_hash !== 'string' ||
+    !/^[0-9a-f]{64}$/.test(row.pin_hash) ||
+    typeof row.salt !== 'string' ||
+    !/^[A-Za-z0-9+/]{22}==$/.test(row.salt) ||
+    !object(row.hash_params) ||
+    Object.entries(SCRYPT_PARAMS).some(
+      ([key, value]) =>
+        row.hash_params && (row.hash_params as Record<string, unknown>)[key] !== value,
+    ) ||
+    !Number.isSafeInteger(row.credential_version) ||
+    (row.credential_version as number) < 1
+  )
+    throw unavailable();
+  return {
+    id,
+    credentialVersion: row.credential_version as number,
+    credential: { hash: row.pin_hash, salt: row.salt, params: SCRYPT_PARAMS },
+  };
+}
+
 export type { PublicAuthData } from '../../features/auth/types';
 export type UserSessionDatabase = AuthDatabase & {
   resolveSession(tokenHash: string): Promise<PublicAuthData>;
@@ -119,28 +143,7 @@ export function createSupabaseAuthDatabase(
     const rows = await request(`user_credentials?${query}`);
     if (!Array.isArray(rows) || rows.length > 1) throw unavailable();
     if (!rows.length) return null;
-    const row: unknown = rows[0];
-    if (
-      !object(row) ||
-      row.user_id !== id ||
-      typeof row.pin_hash !== 'string' ||
-      !/^[0-9a-f]{64}$/.test(row.pin_hash) ||
-      typeof row.salt !== 'string' ||
-      !/^[A-Za-z0-9+/]{22}==$/.test(row.salt) ||
-      !object(row.hash_params) ||
-      Object.entries(SCRYPT_PARAMS).some(
-        ([key, value]) =>
-          row.hash_params && (row.hash_params as Record<string, unknown>)[key] !== value,
-      ) ||
-      !Number.isSafeInteger(row.credential_version) ||
-      (row.credential_version as number) < 1
-    )
-      throw unavailable();
-    return {
-      id,
-      credentialVersion: row.credential_version as number,
-      credential: { hash: row.pin_hash, salt: row.salt, params: SCRYPT_PARAMS },
-    };
+    return accountFromRow(rows[0], id);
   }
   return {
     async reserve(kind, nicknameHmac, sourceHmac) {
@@ -163,7 +166,8 @@ export function createSupabaseAuthDatabase(
     },
     async findAccount(nicknameKey) {
       const query = new URLSearchParams({
-        select: 'id',
+        select:
+          'id,credential:user_credentials!inner(user_id,pin_hash,salt,hash_params,credential_version)',
         nickname_key: `eq.${nicknameKey}`,
         limit: '1',
       });
@@ -171,7 +175,7 @@ export function createSupabaseAuthDatabase(
       if (!Array.isArray(rows) || rows.length > 1) throw unavailable();
       if (!rows.length) return null;
       if (!object(rows[0]) || !uuid(rows[0].id)) throw unavailable();
-      return findAccountById(rows[0].id);
+      return accountFromRow(rows[0].credential, rows[0].id);
     },
     findAccountById,
     async join(input, fingerprint, credential) {
@@ -233,7 +237,15 @@ export function createSupabaseAuthDatabase(
         id: `eq.${row.group_id}`,
         limit: '1',
       });
-      const groups = await request(`study_groups?${groupQuery}`);
+      const memberQuery = new URLSearchParams({
+        select: 'user_id',
+        group_id: `eq.${row.group_id}`,
+        limit: '16',
+      });
+      const [groups, members] = await Promise.all([
+        request(`study_groups?${groupQuery}`),
+        request(`group_members?${memberQuery}`),
+      ]);
       if (!Array.isArray(groups) || groups.length !== 1) throw unavailable();
       const group: unknown = groups[0];
       if (
@@ -244,12 +256,6 @@ export function createSupabaseAuthDatabase(
         group.max_members !== 15
       )
         throw unavailable();
-      const memberQuery = new URLSearchParams({
-        select: 'user_id',
-        group_id: `eq.${row.group_id}`,
-        limit: '16',
-      });
-      const members = await request(`group_members?${memberQuery}`);
       if (
         !Array.isArray(members) ||
         members.length < 1 ||

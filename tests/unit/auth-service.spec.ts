@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { authenticate, type AuthDatabase, type AuthAccount } from '../../src/server/auth/service';
+import {
+  authenticate,
+  AuthServiceError,
+  type AuthDatabase,
+  type AuthAccount,
+} from '../../src/server/auth/service';
 import { loadAuthConfig } from '../../src/server/auth/config';
 import { hashPin, hashSessionToken } from '../../src/server/auth/crypto';
 
@@ -189,4 +194,60 @@ test('새 Supabase secret 키는 legacy 키보다 우선한다', () => {
   expect(loadAuthConfig(env).serviceRoleKey).toBe('sb_secret_test');
   const modern = { ...env, SUPABASE_SERVICE_ROLE_KEY: undefined };
   expect(loadAuthConfig(modern).serviceRoleKey).toBe('sb_secret_test');
+});
+
+test('신규 가입은 방금 생성한 해시를 사용하고 최초 버전1로 최종 세션 검사를 요청한다', async () => {
+  const f = database(account);
+  f.db.join = async () => {
+    f.calls.push('join');
+    return { userId: account.id, created: true };
+  };
+  f.db.findAccountById = async () => {
+    throw new Error('New credentials must not be re-read');
+  };
+  f.db.createSession = async (id, version) => {
+    expect(id).toBe(account.id);
+    expect(version).toBe(1);
+    f.calls.push('session');
+    return { mode: 'normal', expiresAt: '2099-01-01T00:00:00Z' };
+  };
+  const result = await authenticate(
+    'join',
+    {
+      nickname: '토끼',
+      pin: '0123',
+      pinConfirm: '0123',
+      emoji: '🐰',
+      requestId: '550e8400-e29b-41d4-a716-446655440000',
+    },
+    'trusted',
+    f.db,
+    config,
+  );
+  expect(result.created).toBe(true);
+  expect(f.calls).toEqual(['reserve', 'join', 'success', 'session']);
+});
+test('신규 가입 직후 버전 변경·삭제로 최종 세션 검사가 실패하면 토큰을 반환하지 않는다', async () => {
+  const f = database(account);
+  f.db.join = async () => ({ userId: account.id, created: true });
+  f.db.createSession = async (_id, version) => {
+    expect(version).toBe(1);
+    throw new AuthServiceError(401, 'UNAUTHORIZED');
+  };
+  await expect(
+    authenticate(
+      'join',
+      {
+        nickname: '토끼',
+        pin: '0123',
+        pinConfirm: '0123',
+        emoji: '🐰',
+        requestId: '550e8400-e29b-41d4-a716-446655440000',
+      },
+      'trusted',
+      f.db,
+      config,
+    ),
+  ).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+  expect(f.calls).not.toContain('read-current');
 });

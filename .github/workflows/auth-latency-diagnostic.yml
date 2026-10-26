@@ -1,0 +1,29 @@
+name: Auth flow latency diagnostic
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - scripts/measure-auth-flow.mjs
+      - .github/workflows/auth-latency-diagnostic.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: jlpt-production-auth-diagnostic
+  cancel-in-progress: false
+
+jobs:
+  auth-flow:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Measure one temporary account and revoke its sessions
+        run: node scripts/measure-auth-flow.mjs --allow-production-fixture
