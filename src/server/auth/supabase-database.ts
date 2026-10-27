@@ -3,6 +3,7 @@ import type { loadAuthConfig } from './config';
 import { SCRYPT_PARAMS, type PinCredential } from './crypto';
 import { isProfileEmoji, normalizeNickname } from '../../features/auth/validation';
 import { AuthServiceError, type AuthAccount, type AuthDatabase } from './service';
+import type { CreateRecordDatabase } from '../records/create';
 
 const unavailable = () => new AuthServiceError(503, 'AUTH_UNAVAILABLE');
 const uuid = (value: unknown): value is string =>
@@ -54,18 +55,19 @@ function accountFromRow(row: unknown, id: string): AuthAccount {
 }
 
 export type { PublicAuthData } from '../../features/auth/types';
-export type UserSessionDatabase = AuthDatabase & {
-  resolveSession(tokenHash: string): Promise<PublicAuthData>;
-  updateEmoji(tokenHash: string, emoji: string): Promise<PublicAuthData['profile']>;
-  revokeSession(tokenHash: string): Promise<void>;
-  replacePin(
-    mode: 'reset' | 'normal',
-    tokenHash: string,
-    expectedVersion: number,
-    credential: PinCredential,
-    newTokenHash: string,
-  ): Promise<{ expiresAt: string }>;
-};
+export type UserSessionDatabase = AuthDatabase &
+  CreateRecordDatabase<unknown> & {
+    resolveSession(tokenHash: string): Promise<PublicAuthData>;
+    updateEmoji(tokenHash: string, emoji: string): Promise<PublicAuthData['profile']>;
+    revokeSession(tokenHash: string): Promise<void>;
+    replacePin(
+      mode: 'reset' | 'normal',
+      tokenHash: string,
+      expectedVersion: number,
+      credential: PinCredential,
+      newTokenHash: string,
+    ): Promise<{ expiresAt: string }>;
+  };
 
 /** 서버 전용 진입점을 통해 사용한다. groupId는 서버 설정이며 요청 body에서 받지 않는다. */
 export function createSupabaseAuthDatabase(
@@ -114,6 +116,11 @@ export function createSupabaseAuthDatabase(
           PIN_CHANGE_REQUIRED: 403,
           RESET_NOT_REQUIRED: 409,
           VALIDATION_ERROR: 400,
+          FORBIDDEN: 403,
+          NOT_FOUND: 404,
+          CONFLICT: 409,
+          RECORD_DELETED: 409,
+          DAILY_LIMIT_EXCEEDED: 409,
         };
         if (
           object(data) &&
@@ -146,6 +153,62 @@ export function createSupabaseAuthDatabase(
     return accountFromRow(rows[0], id);
   }
   return {
+    async saveRecord(input) {
+      const record = input.record;
+      const result = await rpc('save_record', {
+        p_actor_user_id: input.actorId,
+        p_group_id: input.groupId,
+        p_id: input.id,
+        p_study_date: record.studyDate,
+        p_minutes: record.minutes,
+        p_category_id: record.categoryId,
+        p_start_time: record.startTime,
+        p_quantity: record.quantity,
+        p_quantity_unit: record.quantityUnit,
+        p_memo: record.memo,
+        p_create_fingerprint: input.fingerprint,
+        p_expected_version: null,
+      });
+      const row: unknown = Array.isArray(result) && result.length === 1 ? result[0] : result;
+      if (
+        !object(row) ||
+        row.id !== input.id ||
+        row.user_id !== input.actorId ||
+        row.group_id !== input.groupId ||
+        !uuid(row.category_id)
+      )
+        throw unavailable();
+      const query = new URLSearchParams({
+        select: 'id,name',
+        id: `eq.${row.category_id}`,
+        limit: '1',
+      });
+      const categories = await request(`study_categories?${query}`);
+      if (
+        !Array.isArray(categories) ||
+        categories.length !== 1 ||
+        !object(categories[0]) ||
+        categories[0].id !== row.category_id ||
+        typeof categories[0].name !== 'string'
+      )
+        throw unavailable();
+      return {
+        id: row.id,
+        groupId: row.group_id,
+        userId: row.user_id,
+        studyDate: row.study_date,
+        minutes: row.minutes,
+        categoryId: row.category_id,
+        categoryName: categories[0].name,
+        startTime: typeof row.start_time === 'string' ? row.start_time.slice(0, 5) : null,
+        quantity: row.quantity,
+        quantityUnit: row.quantity_unit,
+        memo: row.memo,
+        version: row.version,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+      };
+    },
     async reserve(kind, nicknameHmac, sourceHmac) {
       const value = await rpc('reserve_auth_attempt', {
         p_kind: kind,
