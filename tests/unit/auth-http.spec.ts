@@ -144,6 +144,7 @@ function fixture(
   };
   return { calls, http: createAuthHttp(env, transport) };
 }
+
 const loginBody = { nickname: '유리', pin: '0123' };
 const expectedData = (limited = false) => ({
   profile: { id, nickname: '유리', emoji: '🐰', mustChangePin: limited },

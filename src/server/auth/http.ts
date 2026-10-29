@@ -30,6 +30,11 @@ const messages: Record<string, string> = {
   BODY_TOO_LARGE: '요청 내용이 너무 커요.',
   AUTH_NOT_CONFIGURED: '인증 설정을 확인 중이에요.',
   AUTH_UNAVAILABLE: '인증 서비스를 잠시 이용할 수 없어요.',
+  FORBIDDEN: '허용되지 않은 요청이에요.',
+  NOT_FOUND: '기록을 찾을 수 없어요.',
+  CONFLICT: '기록이 변경되었어요. 다시 확인해주세요.',
+  RECORD_DELETED: '이미 삭제된 기록이에요.',
+  DAILY_LIMIT_EXCEEDED: '하루 공부 시간은 1440분을 넘을 수 없어요.',
 };
 
 /** Vercel에서 덮어쓰는 출처만 신뢰한다. 다른 호스팅은 별도 어댑터가 필요하다. */
@@ -46,7 +51,7 @@ export function trustedAuthSource(request: Request, env: Environment) {
   throw new AuthServiceError(503, 'AUTH_UNAVAILABLE');
 }
 
-function json(body: unknown, status = 200) {
+export function json(body: unknown, status = 200) {
   return NextResponse.json(body, {
     status,
     headers: {
@@ -56,7 +61,7 @@ function json(body: unknown, status = 200) {
     },
   });
 }
-function failure(error: unknown) {
+export function failure(error: unknown) {
   const known = error instanceof AuthServiceError || error instanceof RequestGuardError;
   const code =
     error instanceof AuthConfigError
@@ -86,7 +91,7 @@ function failure(error: unknown) {
   }
   return response;
 }
-function tokenHash(request: NextRequest, production: boolean) {
+export function tokenHash(request: NextRequest, production: boolean) {
   const { name } = sessionCookie(new Date(0), production);
   const value = request.cookies.get(name)?.value;
   if (!value) return null;
@@ -96,7 +101,7 @@ function tokenHash(request: NextRequest, production: boolean) {
     return null;
   }
 }
-function clearCookie(response: NextResponse, production: boolean) {
+export function clearCookie(response: NextResponse, production: boolean) {
   const { name, options } = sessionCookie(new Date(0), production);
   response.cookies.set(name, '', { ...options, maxAge: 0 });
 }
