@@ -25,3 +25,10 @@ Issue #46 / PR #47에서 POST `/api/records`, GET `/api/records/:id`, GET `/api/
 - https://supabase.com/docs/reference/javascript/using-modifiers-range
 - https://docs.postgrest.org/en/v14/references/api/tables_views.html
 - https://github.com/PostgREST/postgrest/releases/tag/v14.18
+
+## 2026-10-29 실행 결과
+
+- 코드 커밋 `7be4165`의 CI #54에서 포맷·린트·타입·단위81개(Playwright77+Node4), 운영 빌드·Chromium 회귀66개 통과.
+- 같은 CI의 PostgreSQL SQL 계약/동시성 검사 및 실제 PostgREST 통합4개 통과. PostgREST의 DB 응답 상한을100개로 낮춘 상태에서 기간501건의 완전 조회를 확인했다.
+- 생성·재시도 후 수정된 최신값 반환·내용 변경 충돌·삭제된 요청 차단·일일 상한, 정렬 동률/시각null/마이크로초 커서, 타 그룹404·동일 그룹 조회·제한/폐기 세션 거부를 검증했다.
+- 운영 Supabase에서 기존 기록 테이블 RLS와 `save_record`/`resolve_user_session`의 SECURITY INVOKER·서버 실행 허용·브라우저 역할 실행 차단을 읽기 전용 확인했다. 운영 데이터 변경과 화면 변경은 없다.
