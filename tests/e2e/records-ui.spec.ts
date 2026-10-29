@@ -1,5 +1,7 @@
 import { test, expect, type Page, type Route } from '@playwright/test';
 
+test.use({ actionTimeout: 5000 });
+
 const userId = '00000000-0000-4000-8000-000000000001';
 const groupId = '00000000-0000-4000-8000-000000000002';
 const categoryId = '00000000-0000-4000-8000-000000000003';
@@ -54,10 +56,10 @@ async function setup(
 async function fill(page: Page) {
   await page.getByRole('button', { name: '공부 기록 남기기', exact: true }).click();
   const form = page.getByRole('form', { name: '공부 기록 입력' });
-  await form.getByLabel('공부 종류', { exact: true }).selectOption(categoryId);
-  await form.getByLabel('공부 시간 (분)', { exact: true }).fill('30');
-  await form.getByLabel('시작 시각 (선택)', { exact: true }).fill('09:00');
-  await form.getByLabel('메모 (선택)', { exact: true }).fill(base.memo);
+  await form.getByRole('combobox', { name: '공부 종류', exact: true }).selectOption(categoryId);
+  await form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }).fill('30');
+  await form.getByRole('textbox', { name: '시작 시각 (선택)', exact: true }).fill('09:00');
+  await form.getByRole('textbox', { name: '메모 (선택)', exact: true }).fill(base.memo);
   return form;
 }
 
@@ -93,8 +95,12 @@ test('저장 실패 입력 유지·동일ID 재시도·중복 차단·저장/새
   });
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();
   await expect(form.getByRole('alert')).toContainText('같은 요청으로 다시 시도');
-  await expect(form.getByLabel('메모 (선택)', { exact: true })).toHaveValue(base.memo);
-  await expect(form.getByLabel('공부 시간 (분)', { exact: true })).toBeDisabled();
+  await expect(form.getByRole('textbox', { name: '메모 (선택)', exact: true })).toHaveValue(
+    base.memo,
+  );
+  await expect(
+    form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }),
+  ).toBeDisabled();
   await page.getByRole('button', { name: '팝업 닫기' }).click();
   await page.getByRole('button', { name: '계속 작성', exact: true }).click();
   await expect(form).toBeVisible();
@@ -137,10 +143,12 @@ test('종류 조회 실패 재시도·빈 목록 저장 차단·공부량 검증
   await expect(page.getByText('등록된 공부 종류가 없어요. 관리자에게 문의해주세요.')).toBeVisible();
   await page.getByRole('button', { name: '팝업 닫기' }).click();
   const form = await fill(page);
-  await form.getByLabel('공부량 (선택)', { exact: true }).fill('5');
+  await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('5');
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();
   await expect(form.getByText('공부량과 단위를 함께 입력해 주세요.').first()).toBeVisible();
-  await expect(form.getByLabel('공부 시간 (분)', { exact: true })).toHaveValue('30');
+  await expect(form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true })).toHaveValue(
+    '30',
+  );
 });
 
 test('다음 페이지 실패는 기존 목록 유지·재시도 후 추가·월 변경은 이전 데이터 숨김', async ({
@@ -188,7 +196,9 @@ test('다음 페이지 실패는 기존 목록 유지·재시도 후 추가·월
   await expect(page.getByText(base.memo, { exact: true })).toHaveCount(0);
 });
 
-test('세션 만료는 입력 유지·재로그인 안내, 다크 모드 가로 넘침 없음', async ({ page }, info) => {
+test('세션 만료 입력 유지·재로그인 안내, 시스템 다크 설정에서도 밝은 테마 유지', async ({
+  page,
+}, info) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await setup(page, {
     records: async (route) => {
@@ -205,7 +215,9 @@ test('세션 만료는 입력 유지·재로그인 안내, 다크 모드 가로 
   const form = await fill(page);
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();
   await expect(form.getByRole('alert')).toContainText('세션이 만료');
-  await expect(form.getByLabel('메모 (선택)', { exact: true })).toHaveValue(base.memo);
+  await expect(form.getByRole('textbox', { name: '메모 (선택)', exact: true })).toHaveValue(
+    base.memo,
+  );
   await expect(form.getByRole('link', { name: '새 창에서 다시 로그인' })).toHaveAttribute(
     'target',
     '_blank',

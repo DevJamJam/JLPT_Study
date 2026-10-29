@@ -84,7 +84,12 @@ function Records({ userId, groupId }: { userId: string; groupId: string }) {
         <Button onClick={() => setOpen(true)}>공부 기록 남기기</Button>
       </div>
       <p className={styles.help}>하루하루 쌓아가는 나의 공부 기록</p>
-      <PeriodPicker label={`${month.slice(0, 4)}년 ${Number(month.slice(5))}월`} onMove={move} />
+      <PeriodPicker
+        label={`${month.slice(0, 4)}년 ${Number(month.slice(5))}월`}
+        onMove={move}
+        previousDisabled={month === '2000-01'}
+        nextDisabled={month >= today.slice(0, 7)}
+      />
       <div className={styles.actions}>
         <Button variant="quiet" disabled={query.isFetching} onClick={() => void query.refetch()}>
           기록 새로고침

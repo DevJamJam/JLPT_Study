@@ -4,7 +4,7 @@ JLPT를 준비하는 소규모 스터디를 위한 공부 기록 웹앱입니다
 
 ## 현재 진행 상태
 
-현재는 **인증·프로필 화면과 학습 기록 서버 API 구현 단계**입니다. 가입·로그인·로그아웃, PIN 변경·대표 이모티콘 변경은 실제 API에 연결했습니다. 학습 기록은 생성·단건 조회·기간 조회·개인 월 목록 API를 구현했고 화면·통계 연결은 후속입니다. `/preview`는 가상 데이터 디자인 검토 화면입니다.
+현재는 **인증·프로필·기록 입력/조회 화면 구현 단계**입니다. 가입·로그인·로그아웃, PIN 변경·대표 이모티콘 변경은 실제 API에 연결했습니다. 학습 기록 생성·단건/기간/개인 월 목록 API와 입력 팝업·월별 내 기록을 연결했습니다. 달력·통계 연결은 후속입니다. `/preview`는 가상 데이터 디자인 검토 화면입니다.
 
 | 항목                                | 상태                                                      |
 | ----------------------------------- | --------------------------------------------------------- |
@@ -13,11 +13,11 @@ JLPT를 준비하는 소규모 스터디를 위한 공부 기록 웹앱입니다
 | 컬러 토큰·프로젝트·협업 규칙        | 구성 완료                                                 |
 | 인증·프로필 API와 화면              | 연결 완료, 운영 배포                                      |
 | 학습 기록 생성·조회 API             | 구현, 검증 결과는 PR #47에서 확인                         |
-| 기록 입력·서울 날짜 검증            | 생성 API 연결, 화면 연결은 후속                           |
+| 기록 입력·서울 날짜 검증            | 생성 API와 입력·월별 목록 화면 연결                       |
 | 기록 수정·삭제·통계·관리자 API/화면 | 후속                                                      |
 | 포맷·린트·타입·빌드·브라우저·DB CI  | 구성 완료, 각 PR의 실제 결과 확인                         |
 
-서버 가입·로그인 흐름과 인증 설정 검증도 추가했습니다. 테스트용 DB 인터페이스로 검증했으며 Supabase 서버 어댑터까지 추가했습니다. POST /api/auth/login, GET /api/auth/me, POST /api/auth/logout을 연결했습니다. 로그인은 공개 프로필·그룹 DTO와 HttpOnly 쿠키를 반환하고, me는 만료를 연장하지 않으며 로그아웃은 현재 세션만 폐기합니다. Vercel 서버 환경변수와 신뢰 출처 헤더를 사용합니다. POST /api/auth/join은 신규201·같은 요청 재시도200을 구분합니다. 가입·로그인 화면도 실제 API에 연결했습니다. 초기화된 PIN의 강제 변경 화면과 API도 연결했습니다. 일반 PIN 변경도 내 설정 팝업과 POST /api/auth/change-pin으로 연결했습니다. 대표 이모티콘 변경은 PATCH /api/me/emoji로 저장합니다. 기록 생성·단건/기간/개인 월 조회 API를 연결했습니다. 관리자 인증과 기록·통계 화면 연결은 후속입니다.
+서버 가입·로그인 흐름과 인증 설정 검증도 추가했습니다. 테스트용 DB 인터페이스로 검증했으며 Supabase 서버 어댑터까지 추가했습니다. POST /api/auth/login, GET /api/auth/me, POST /api/auth/logout을 연결했습니다. 로그인은 공개 프로필·그룹 DTO와 HttpOnly 쿠키를 반환하고, me는 만료를 연장하지 않으며 로그아웃은 현재 세션만 폐기합니다. Vercel 서버 환경변수와 신뢰 출처 헤더를 사용합니다. POST /api/auth/join은 신규201·같은 요청 재시도200을 구분합니다. 가입·로그인 화면도 실제 API에 연결했습니다. 초기화된 PIN의 강제 변경 화면과 API도 연결했습니다. 일반 PIN 변경도 내 설정 팝업과 POST /api/auth/change-pin으로 연결했습니다. 대표 이모티콘 변경은 PATCH /api/me/emoji로 저장합니다. 기록 생성·단건/기간/개인 월 조회 API를 연결했습니다. 기록 입력·월별 내 기록 화면을 연결했고 관리자 인증·달력·통계는 후속입니다.
 
 ## 확정 기능
 
@@ -58,7 +58,7 @@ HTML 파일은 내려받아 브라우저에서 열 수 있습니다. 시안의 �
 | 테스트           | Vitest / Playwright                 |
 | 배포             | Vercel                              |
 
-실제 패키지 버전은 프로젝트 생성 때 호환성을 확인하고 lockfile로 고정합니다. Next.js·React·TypeScript·ESLint·Prettier·React Icons·SweetAlert2·Playwright·server-only를 설치했습니다. TanStack Query·Supabase·Vitest는 해당 기능 단계에서 추가합니다.
+실제 패키지 버전은 프로젝트 생성 때 호환성을 확인하고 lockfile로 고정합니다. Next.js·React·TypeScript·ESLint·Prettier·React Icons·SweetAlert2·Playwright·server-only를 설치했습니다. TanStack Query5.105.0을 기록 화면에 추가했습니다. Supabase SDK·Vitest는 미설치이며 서버 REST·Playwright 검사 구성을 사용합니다.
 
 ## 폴더 구조
 
@@ -166,7 +166,7 @@ npm run dev
 
 브라우저에서 http://localhost:3000/preview 를 엽니다. 디자인 검토용 가상 데이터이며 입력 내용을 실제로 저장하지 않습니다. `npm run check`는 포맷·린트·타입 검사, `npm run build`는 운영 빌드, `npm run format`은 소스 포맷 정리입니다. 기존 docs 문서는 포맷 자동 변경에서 제외합니다.
 
-기록 검증 단위 검사: `npm run test:unit`. Playwright 러너의 순수 코어·HTTP 검사와 Node 관리자 초기화 검사 총 83개를 브라우저 없이 실행합니다. 기록 생성·조회 API에 검증 함수를 연결했습니다. 기록 수정·삭제 API와 화면 연결은 후속입니다.
+기록 검증 단위 검사: `npm run test:unit`. Playwright 러너의 순수 코어·HTTP 검사와 Node 관리자 초기화 검사 총 83개를 브라우저 없이 실행합니다. 기록 생성·조회 API에 검증 함수를 연결했습니다. 기록 수정·삭제 API는 후속입니다.
 
 브라우저 검사: `npx playwright install chromium` 후 `npm run test:e2e`. 검사 명령은 운영 빌드 서버를 자동으로 시작합니다. SE3·패드·PC는 Chromium 화면 크기 검사이며 실제 Safari 기기 검사가 아닙니다.
 
@@ -209,7 +209,7 @@ Vercel에 환경변수를 저장하는 것만으로 명령이 실행되지는 �
 
 ### 인증 화면
 
-/login·/join은 실제 인증 API에 연결합니다. /는 세션을 확인하고 공개 프로필·그룹과 로그아웃을 표시하며, 무세션은 로그인으로 이동합니다. 기록·통계 홈은 후속이고 제한 세션은 새 PIN·확인을 입력해 변경한 뒤 정상 세션으로 돌아갑니다. 정상 세션은 상단 이모지 → 내 설정 → 간편 비밀번호 변경에서 현재 PIN·새 PIN·확인을 입력합니다. 성공 시 모든 이전 세션을 폐기하고 현재 기기에 새 쿠키를 발급합니다. 설정의 대표 이모티콘20개 선택·저장도 PATCH /api/me/emoji에 연결했습니다. 저장 후 현재 프로필을 갱신하고, 다른 기기는 세션 재조회 시 최신 이모티콘을 읽습니다. /preview는 가상 데이터 디자인 검토 전용입니다.
+/login·/join은 실제 인증 API에 연결합니다. /는 세션을 확인하고 공개 프로필·그룹과 로그아웃을 표시하며, 무세션은 로그인으로 이동합니다. 기록 입력·월별 내 기록을 표시하며 달력·통계 홈은 후속입니다. 제한 세션은 새 PIN·확인을 입력해 변경한 뒤 정상 세션으로 돌아갑니다. 정상 세션은 상단 이모지 → 내 설정 → 간편 비밀번호 변경에서 현재 PIN·새 PIN·확인을 입력합니다. 성공 시 모든 이전 세션을 폐기하고 현재 기기에 새 쿠키를 발급합니다. 설정의 대표 이모티콘20개 선택·저장도 PATCH /api/me/emoji에 연결했습니다. 저장 후 현재 프로필을 갱신하고, 다른 기기는 세션 재조회 시 최신 이모티콘을 읽습니다. /preview는 가상 데이터 디자인 검토 전용입니다.
 
 ### 인증 API 응답 시간 점검
 
@@ -221,7 +221,7 @@ Vercel Functions는 `vercel.json`의 `hnd1`(도쿄)에서 실행하도록 설정
 
 ### 학습 기록 API
 
-`POST /api/records`는 정상 일반 사용자 세션에서 본인 기록을 저장합니다. `GET /api/records/:id`는 같은 그룹의 기록만 조회합니다. 목록은 `scope=mine|group&from=YYYY-MM-DD&to=YYYY-MM-DD`(최대42일) 또는 `scope=mine&month=YYYY-MM&limit=30&cursor=...`로 조회합니다. 두 형식을 혼용할 수 없습니다. 생성 시 같은 ID·입력을 유지해 재시도합니다. 기록 수정·삭제와 화면 연결은 아직 후속입니다.
+`POST /api/records`는 정상 일반 사용자 세션에서 본인 기록을 저장합니다. `GET /api/records/:id`는 같은 그룹의 기록만 조회합니다. 목록은 `scope=mine|group&from=YYYY-MM-DD&to=YYYY-MM-DD`(최대42일) 또는 `scope=mine&month=YYYY-MM&limit=30&cursor=...`로 조회합니다. 두 형식을 혼용할 수 없습니다. 생성 시 같은 ID·입력을 유지해 재시도합니다. 기록 수정·삭제와 달력·통계 화면은 후속입니다.
 
 CI의 database 작업은 기존 SQL 계약 검사 후 격리된 PostgREST14.18을 실행하고 `npx playwright test --config playwright.integration.config.ts`로 실제 HTTP/DB 통합4개를 검사합니다. 이 검사는 localhost의 전용 `jlpt_test` DB와 테스트 PostgREST URL을 모두 요구하며 운영 DB에서 실행할 수 없습니다. 자세한 계약과 검증 한계는 [결정 기록022](docs/decisions/022-record-api.md)에 남깁니다.
 
