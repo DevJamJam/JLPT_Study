@@ -192,7 +192,7 @@ npm run dev
 
 브라우저 검사: `npx playwright install chromium` 후 `npm run test:e2e`. 검사 명령은 운영 빌드 서버를 자동으로 시작합니다. SE3·패드·PC는 Chromium 화면 크기 검사이며 실제 Safari 기기 검사가 아닙니다.
 
-DB 검사: PostgreSQL 16의 빈 `jlpt_test` DB와 `psql`·Python 3이 필요합니다. `JLPT_TEST_DATABASE_URL`을 로컬 테스트 DB에 설정한 뒤 `python3 scripts/test-db.py`를 실행합니다. 기존 테이블이 있으면 중단합니다. CI는 별도 PostgreSQL 컨테이너에서 스키마·권한·기록 계약·동시 저장을 검사합니다. 가입·세션 RPC와 PIN 해시 기반은 구현했습니다. Supabase 스키마 적용·시도 제한 SQL 검증은 완료했습니다. 로그인·세션 확인·로그아웃 서버 연결을 추가했습니다. 강제 PIN 변경 RPC를 추가했습니다. 일반 PIN 변경 RPC도 추가했습니다. 멤버·달력 조회 API를 추가했고 달력·통계·관리자 화면 연결은 다음 단계입니다.
+DB 검사: PostgreSQL 16의 빈 `jlpt_test` DB와 `psql`·Python 3이 필요합니다. `JLPT_TEST_DATABASE_URL`을 로컬 테스트 DB에 설정한 뒤 `python3 scripts/test-db.py`를 실행합니다. 기존 테이블이 있으면 중단합니다. CI는 별도 PostgreSQL 컨테이너에서 스키마·권한·기록 계약·동시 저장을 검사합니다. 가입·세션 RPC와 PIN 해시 기반은 구현했습니다. Supabase 스키마 적용·시도 제한 SQL 검증은 완료했습니다. 로그인·세션 확인·로그아웃 서버 연결을 추가했습니다. 강제 PIN 변경 RPC를 추가했습니다. 일반 PIN 변경 RPC도 추가했습니다. 멤버·달력 조회 API와 달력·날짜 상세 화면을 연결했고 통계·관리자는 다음 단계입니다.
 
 Supabase와 배포 비밀값은 채팅이나 Git에 저장하지 않습니다. `.env.example`에는 이름만 제공하며 실제 값은 로컬·배포 환경변수로 설정합니다.
 
@@ -256,7 +256,7 @@ CI의 database 작업은 기존 SQL 계약 검사 후 격리된 PostgREST14.18�
 `GET /api/members`는 같은 그룹의 공개 프로필을 가입순으로 반환합니다.
 `GET /api/calendar?scope=mine|group&from=YYYY-MM-DD&to=YYYY-MM-DD`는 양 끝 포함
 최대42일의 날짜별 합계·고유 참여자 시간을 반환하며 빈 날짜도 포함합니다. 메모와 자격증명은
-읽지 않습니다. 정상 사용자 세션만 허용합니다. 화면 연결은 다음 단계이며
+읽지 않습니다. 정상 사용자 세션만 허용합니다. 실제 달력 화면을 연결했으며
 [결정 기록027](docs/decisions/027-calendar-api-and-checkpoint.md)을 참고합니다.
 
 ### 실제 달력·공통 메뉴

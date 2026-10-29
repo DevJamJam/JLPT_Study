@@ -391,8 +391,8 @@ export function RecordForm({
               {...invalid('memo')}
             />
             {fieldError('memo')}
-            <span className={styles.help}>스터디원에게 공개됩니다.</span>
           </label>
+          <p className={styles.help}>스터디원에게 공개됩니다.</p>
         </fieldset>
         {error && (
           <p role="alert" className={styles.error}>

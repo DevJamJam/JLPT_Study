@@ -3,7 +3,10 @@ import Swal from 'sweetalert2';
 export function toast(message: string) {
   return Swal.fire({
     toast: true,
-    target: document.querySelector<HTMLDialogElement>('dialog[open]') ?? document.body,
+    // Keep the container alive when a record dialog is replaced or unmounted.
+    // The native top layer also keeps notifications visible above modal dialogs.
+    target: document.body,
+    topLayer: true,
     position: 'top',
     timer: 2500,
     showConfirmButton: false,

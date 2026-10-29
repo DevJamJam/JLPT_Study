@@ -237,7 +237,7 @@ test('선택 날짜 추가·응답 유실 재시도·상세 복귀·마지막 �
   await expect(detail.getByText('아직 기록이 없어요. 공부 기록을 남겨 보아요.')).toBeVisible();
   await expect(page.getByText('공부 기록을 삭제했어요.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '팝업 닫기' }).click();
-  await expect(day(page, '2026-10-28').getByText('🐰', { exact: true })).toHaveCount(0);
+  await expect(day(page, '2026-10-28').locator('[title="공부하는 토끼"]')).toHaveCount(0);
 });
 
 test('상세 수정은 새 날짜로 돌아가고 중첩 팝업을 만들지 않는다', async ({ page }) => {
@@ -281,6 +281,13 @@ test('뒤로가기 취소는 초안을 유지하고 제출 중에는 팝업을 �
   await expect(
     page.getByRole('dialog', { name: '2026-10-28 공부 기록', exact: true }),
   ).toBeVisible();
+  await page.getByRole('button', { name: '팝업 닫기' }).click();
+  const next = await newForm(page, '2026-10-27');
+  await next.getByRole('textbox', { name: '메모 (선택)', exact: true }).fill('폐기할 초안');
+  await page.goBack();
+  await page.getByRole('button', { name: '버리기', exact: true }).click();
+  await expect(next).toHaveCount(0);
+  await expect(page).not.toHaveURL(/date=/);
 });
 
 test('주간 날짜·빈 날 추가·기간 이동과 하단 오늘 추가를 연결한다', async ({ page }, info) => {
@@ -309,16 +316,16 @@ test('주간 날짜·빈 날 추가·기간 이동과 하단 오늘 추가를 �
 
 test('갱신 실패는 이전 기록 유지, 세션 만료는 이전 기록 숨김', async ({ page }) => {
   const { state } = await setup(page);
-  await expect(day(page).getByText('🐰', { exact: true })).toBeVisible();
+  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
   state.calendarStatus = 503;
   await page.getByRole('button', { name: '달력 새로고침' }).click();
   await expect(page.getByRole('alert')).toContainText('달력을 불러오지 못했어요');
-  await expect(day(page).getByText('🐰', { exact: true })).toBeVisible();
+  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
   state.calendarStatus = 401;
   await page.getByRole('button', { name: '달력 다시 불러오기' }).click();
   await expect(page.getByRole('alert')).toContainText('세션을 다시 확인');
   await expect(day(page)).toBeDisabled();
-  await expect(day(page).getByText('🐰', { exact: true })).toHaveCount(0);
+  await expect(day(page).locator('[title="공부하는 토끼"]')).toHaveCount(0);
 });
 
 test('직접 날짜 주소·미래 추가 차단·잘못된 팝업 주소 정리', async ({ page }) => {
