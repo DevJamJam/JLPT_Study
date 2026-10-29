@@ -1,3 +1,4 @@
+import { createCalendarDatabase, type CalendarDatabase } from '../calendar/database';
 import type { loadAuthConfig } from '../auth/config';
 import { AuthServiceError } from '../auth/service';
 import { createSupabaseAuthDatabase } from '../auth/supabase-database';
@@ -60,24 +61,25 @@ export function recordFromRow(row: unknown, groupId: string, actorId?: string): 
   };
 }
 
-export type RecordDatabase = CreateRecordDatabase<StudyRecord> & {
-  updateRecord(input: {
-    actorId: string;
-    groupId: string;
-    id: string;
-    record: RecordInput;
-    expectedVersion: number;
-  }): Promise<StudyRecord>;
-  deleteRecord(input: {
-    actorId: string;
-    groupId: string;
-    id: string;
-    expectedVersion: number;
-  }): Promise<void>;
-  getRecord(id: string, groupId: string): Promise<StudyRecord>;
-  listCategories(): Promise<{ id: string; name: string }[]>;
-  listRecords(query: RecordQuery, actorId: string, groupId: string): Promise<RecordPage>;
-};
+export type RecordDatabase = CreateRecordDatabase<StudyRecord> &
+  CalendarDatabase & {
+    updateRecord(input: {
+      actorId: string;
+      groupId: string;
+      id: string;
+      record: RecordInput;
+      expectedVersion: number;
+    }): Promise<StudyRecord>;
+    deleteRecord(input: {
+      actorId: string;
+      groupId: string;
+      id: string;
+      expectedVersion: number;
+    }): Promise<void>;
+    getRecord(id: string, groupId: string): Promise<StudyRecord>;
+    listCategories(): Promise<{ id: string; name: string }[]>;
+    listRecords(query: RecordQuery, actorId: string, groupId: string): Promise<RecordPage>;
+  };
 
 export function createRecordDatabase(
   config: ReturnType<typeof loadAuthConfig>,
@@ -102,6 +104,7 @@ export function createRecordDatabase(
     return record;
   }
   return {
+    ...createCalendarDatabase(config, transport, observeRequest),
     resolveSession: auth.resolveSession,
     getRecord,
     async updateRecord(input) {

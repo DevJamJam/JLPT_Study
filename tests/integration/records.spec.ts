@@ -229,6 +229,51 @@ test('수정·삭제 API의 실제 DB 권한·동시 버전·재시도·일일 �
   expect((await recreated.json()).error.code).toBe('RECORD_DELETED');
 });
 
+test('실제 멤버 공개 DTO·가입순·최신 이모지와 달력501건·빈 날짜·개인 범위', async () => {
+  sql(
+    `update public.group_members set joined_at=case when user_id='${peer}' then timestamptz '2026-09-01T00:00:00Z' else timestamptz '2026-09-02T00:00:00Z' end where group_id='${group}';`,
+  );
+  const response = await http.members(req());
+  expect(response.status).toBe(200);
+  const members = (await response.json()).data.members;
+  expect(members.map((member: { id: string }) => member.id)).toEqual([peer, user]);
+  expect(Object.keys(members[0]).sort()).toEqual(['emoji', 'id', 'joinedAt', 'nickname']);
+  expect(members.some((member: { id: string }) => member.id === outsider)).toBe(false);
+  sql(`update public.users set emoji='🐶' where id='${user}';`);
+  expect(
+    (await (await http.members(req())).json()).data.members.find(
+      (member: { id: string }) => member.id === user,
+    ).emoji,
+  ).toBe('🐶');
+  sql(`update public.users set emoji='🐰' where id='${user}';`);
+  const calendar = await http.calendar(req('?scope=group&from=2026-09-09&to=2026-09-11'));
+  expect(calendar.status).toBe(200);
+  expect((await calendar.json()).data.days).toEqual([
+    { date: '2026-09-09', totalMinutes: 0, participants: [] },
+    { date: '2026-09-10', totalMinutes: 501, participants: [{ userId: peer, minutes: 501 }] },
+    { date: '2026-09-11', totalMinutes: 0, participants: [] },
+  ]);
+  const mine = await http.calendar(req('?scope=mine&from=2026-09-09&to=2026-09-11'));
+  expect(
+    (await mine.json()).data.days.every(
+      (day: { totalMinutes: number; participants: unknown[] }) =>
+        day.totalMinutes === 0 && day.participants.length === 0,
+    ),
+  ).toBe(true);
+  const full = await http.calendar(req('?scope=group&from=2026-08-31&to=2026-10-11'));
+  expect(full.status).toBe(200);
+  expect((await full.json()).data.days).toHaveLength(42);
+  expect((await http.calendar(req('?scope=group&from=2026-08-31&to=2026-10-12'))).status).toBe(400);
+  expect((await http.members(req('', undefined, limitedToken))).status).toBe(403);
+  expect(
+    (
+      await http.calendar(
+        req('?scope=group&from=2026-09-09&to=2026-09-11', undefined, limitedToken),
+      )
+    ).status,
+  ).toBe(403);
+});
+
 test('다른 그룹은404, 같은 그룹 기록은 조회 가능, 제한·폐기 세션은 차단한다', async () => {
   expect((await http.get(req(), '46000000-0000-4000-8000-000000000900')).status).toBe(404);
   expect((await http.get(req(), '46000000-0000-4000-8000-000000001000')).status).toBe(200);

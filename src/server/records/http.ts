@@ -20,7 +20,7 @@ export function createRecordsHttp(
   transport: typeof fetch = fetch,
 ) {
   async function handle(
-    action: 'create' | 'update' | 'delete' | 'get' | 'list' | 'categories',
+    action: 'create' | 'update' | 'delete' | 'get' | 'list' | 'categories' | 'members' | 'calendar',
     request: NextRequest,
     id?: string,
   ) {
@@ -48,6 +48,11 @@ export function createRecordsHttp(
           return json({ data: await mutateRecord(action, id, body, hash, db) });
         const session = await db.resolveSession(hash);
         if (session.profile.mustChangePin) throw new RecordRequestError(403, 'PIN_CHANGE_REQUIRED');
+        if (action === 'members') {
+          if (request.nextUrl.searchParams.size)
+            throw new RecordRequestError(400, 'VALIDATION_ERROR');
+          return json({ data: { members: await db.listMembers(session.group.id) } });
+        }
         if (action === 'categories')
           return json({ data: { categories: await db.listCategories() } });
         if (action === 'get') {
@@ -59,6 +64,12 @@ export function createRecordsHttp(
           session.profile.id,
           session.group.id,
         );
+        if (action === 'calendar') {
+          if (query.kind !== 'period') throw new RecordRequestError(400, 'VALIDATION_ERROR');
+          return json({
+            data: { days: await db.getCalendar(query, session.profile.id, session.group.id) },
+          });
+        }
         return json({ data: await db.listRecords(query, session.profile.id, session.group.id) });
       } catch (error) {
         const known = error instanceof RecordRequestError || error instanceof AuthServiceError;
@@ -94,6 +105,8 @@ export function createRecordsHttp(
     delete: (request: NextRequest, id: string) => handle('delete', request, id),
     get: (request: NextRequest, id: string) => handle('get', request, id),
     list: (request: NextRequest) => handle('list', request),
+    members: (request: NextRequest) => handle('members', request),
+    calendar: (request: NextRequest) => handle('calendar', request),
     categories: (request: NextRequest) => handle('categories', request),
   };
 }

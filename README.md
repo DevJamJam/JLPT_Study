@@ -4,7 +4,7 @@ JLPT를 준비하는 소규모 스터디를 위한 공부 기록 웹앱입니다
 
 ## 현재 진행 상태
 
-현재는 **인증·프로필·기록 입력/조회 화면 구현 단계**입니다. 가입·로그인·로그아웃, PIN 변경·대표 이모티콘 변경은 실제 API에 연결했습니다. 학습 기록 생성·조회·수정·삭제 API와 입력 팝업·월별 내 기록을 연결했습니다. 달력·통계 연결은 후속입니다. `/preview`는 가상 데이터 디자인 검토 화면입니다.
+현재는 **인증·기록 CRUD 화면 완료, 달력 연결 단계**입니다. 가입·로그인·로그아웃, PIN 변경·대표 이모티콘 변경은 실제 API에 연결했습니다. 학습 기록 생성·조회·수정·삭제 API와 입력 팝업·월별 내 기록을 연결했습니다. 달력·통계 연결은 후속입니다. `/preview`는 가상 데이터 디자인 검토 화면입니다.
 
 | 항목                               | 상태                                                      |
 | ---------------------------------- | --------------------------------------------------------- |
@@ -16,10 +16,26 @@ JLPT를 준비하는 소규모 스터디를 위한 공부 기록 웹앱입니다
 | 기록 입력·서울 날짜 검증           | 생성 API와 입력·월별 목록 화면 연결                       |
 | 기록 수정·삭제 API                 | 구현, 검증 결과는 PR #51에서 확인                         |
 | 기록 편집·삭제 UI                  | 월별 내 기록에 연결, PR #55 검증 결과 확인                |
+| 멤버·달력 조회 API                 | 구현, PR #57 검증 결과 확인                               |
+| 달력·공통 메뉴·날짜 상세 화면      | 다음 작업                                                 |
 | 통계·관리자 API/화면               | 후속                                                      |
 | 포맷·린트·타입·빌드·브라우저·DB CI | 구성 완료, 각 PR의 실제 결과 확인                         |
 
 서버 가입·로그인 흐름과 인증 설정 검증도 추가했습니다. 테스트용 DB 인터페이스로 검증했으며 Supabase 서버 어댑터까지 추가했습니다. POST /api/auth/login, GET /api/auth/me, POST /api/auth/logout을 연결했습니다. 로그인은 공개 프로필·그룹 DTO와 HttpOnly 쿠키를 반환하고, me는 만료를 연장하지 않으며 로그아웃은 현재 세션만 폐기합니다. Vercel 서버 환경변수와 신뢰 출처 헤더를 사용합니다. POST /api/auth/join은 신규201·같은 요청 재시도200을 구분합니다. 가입·로그인 화면도 실제 API에 연결했습니다. 초기화된 PIN의 강제 변경 화면과 API도 연결했습니다. 일반 PIN 변경도 내 설정 팝업과 POST /api/auth/change-pin으로 연결했습니다. 대표 이모티콘 변경은 PATCH /api/me/emoji로 저장합니다. 기록 생성·단건/기간/개인 월 조회 API를 연결했습니다. 기록 입력·월별 내 기록 화면을 연결했고 관리자 인증·달력·통계는 후속입니다.
+
+## MVP 중간점검 — 2026-10-29
+
+| 범위                     | 실제 상태                | 남은 작업                                                      |
+| ------------------------ | ------------------------ | -------------------------------------------------------------- |
+| 인증·설정                | 배포 완료                | 실제 기기 간 최종 확인                                         |
+| 기록 생성·조회·수정·삭제 | 화면/API 배포 완료       | 달력·통계 연결 시 갱신 확인                                    |
+| 달력·날짜 상세·공통 메뉴 | 조회 API 구현, 시안 있음 | 다음 화면 연결 작업                                            |
+| 홈·스터디·개인 통계      | 시안 있음                | 집계 API·실제 화면 연결                                        |
+| 관리자                   | 초기 생성 명령 있음      | 관리자 생성 실행·인증·종류 CRUD·회원 삭제·PIN 초기화           |
+| 운영 마무리              | HTTPS·CI 배포 구성 있음  | 실제 공휴일·연락 경로·백업/정리·실기기·동기화·선행 사용자 확인 |
+
+다음 달력 목표는 조회 API와 화면 연결의 두 작업이다. 이 PR은 조회 API 범위이며,
+실제 화면 연결 뒤 통계·관리자·운영 검증으로 이어간다. 시안·자동 검사·실기기 완료를 구분한다.
 
 ## 확정 기능
 
@@ -57,7 +73,7 @@ HTML 파일은 내려받아 브라우저에서 열 수 있습니다. 시안의 �
 | 데이터베이스     | Supabase PostgreSQL                 |
 | 로그인           | 자체 서버 인증 + HttpOnly 세션 쿠키 |
 | 확인창·Toast     | SweetAlert2                         |
-| 테스트           | Vitest / Playwright                 |
+| 테스트           | Playwright / Node test / PostgreSQL |
 | 배포             | Vercel                              |
 
 실제 패키지 버전은 프로젝트 생성 때 호환성을 확인하고 lockfile로 고정합니다. Next.js·React·TypeScript·ESLint·Prettier·React Icons·SweetAlert2·Playwright·server-only를 설치했습니다. TanStack Query5.105.0을 기록 화면에 추가했습니다. Supabase SDK·Vitest는 미설치이며 서버 REST·Playwright 검사 구성을 사용합니다.
@@ -81,23 +97,28 @@ docs/
   JLPT_Study_Room_Requirements_v1_1.html
 src/
   app/
-    layout.tsx
+    api/                  auth, me/emoji, records, categories, members, calendar
+    login/
+    join/
+    preview/              디자인 검토 전용
     page.tsx
-    page.module.css
+    layout.tsx
   components/
     ui/
     layout/
   features/
     design-preview/
     study-record/
-      validation.ts
+    calendar/             조회 DTO 타입, 화면은 다음 단계
     auth/
-      validation.ts
   lib/
     notifications.ts
     seoul-date.ts
   server/
     auth/
+    records/
+    calendar/
+    database.ts
   styles/
     tokens.css
     globals.css
@@ -168,11 +189,11 @@ npm run dev
 
 브라우저에서 http://localhost:3000/preview 를 엽니다. 디자인 검토용 가상 데이터이며 입력 내용을 실제로 저장하지 않습니다. `npm run check`는 포맷·린트·타입 검사, `npm run build`는 운영 빌드, `npm run format`은 소스 포맷 정리입니다. 기존 docs 문서는 포맷 자동 변경에서 제외합니다.
 
-기록 검증 단위 검사: `npm run test:unit`. Playwright 러너의 순수 코어·HTTP 검사와 Node 관리자 초기화 검사 총 87개를 브라우저 없이 실행합니다. 기록 생성·조회 API에 검증 함수를 연결했습니다. 기록 수정·삭제 API와 월별 목록의 편집·삭제 화면을 연결했습니다.
+기록 검증 단위 검사: `npm run test:unit`. Playwright 러너의 순수 코어·HTTP 검사와 Node 관리자 초기화 검사 총 93개를 브라우저 없이 실행합니다. 기록 생성·조회 API에 검증 함수를 연결했습니다. 기록 수정·삭제 API와 월별 목록의 편집·삭제 화면을 연결했습니다.
 
 브라우저 검사: `npx playwright install chromium` 후 `npm run test:e2e`. 검사 명령은 운영 빌드 서버를 자동으로 시작합니다. SE3·패드·PC는 Chromium 화면 크기 검사이며 실제 Safari 기기 검사가 아닙니다.
 
-DB 검사: PostgreSQL 16의 빈 `jlpt_test` DB와 `psql`·Python 3이 필요합니다. `JLPT_TEST_DATABASE_URL`을 로컬 테스트 DB에 설정한 뒤 `python3 scripts/test-db.py`를 실행합니다. 기존 테이블이 있으면 중단합니다. CI는 별도 PostgreSQL 컨테이너에서 스키마·권한·기록 계약·동시 저장을 검사합니다. 가입·세션 RPC와 PIN 해시 기반은 구현했습니다. Supabase 스키마 적용·시도 제한 SQL 검증은 완료했습니다. 로그인·세션 확인·로그아웃 서버 연결을 추가했습니다. 강제 PIN 변경 RPC를 추가했습니다. 일반 PIN 변경 RPC도 추가했습니다. 관리자 RPC와 공부 기록·통계 화면 연결은 다음 단계입니다.
+DB 검사: PostgreSQL 16의 빈 `jlpt_test` DB와 `psql`·Python 3이 필요합니다. `JLPT_TEST_DATABASE_URL`을 로컬 테스트 DB에 설정한 뒤 `python3 scripts/test-db.py`를 실행합니다. 기존 테이블이 있으면 중단합니다. CI는 별도 PostgreSQL 컨테이너에서 스키마·권한·기록 계약·동시 저장을 검사합니다. 가입·세션 RPC와 PIN 해시 기반은 구현했습니다. Supabase 스키마 적용·시도 제한 SQL 검증은 완료했습니다. 로그인·세션 확인·로그아웃 서버 연결을 추가했습니다. 강제 PIN 변경 RPC를 추가했습니다. 일반 PIN 변경 RPC도 추가했습니다. 멤버·달력 조회 API를 추가했고 달력·통계·관리자 화면 연결은 다음 단계입니다.
 
 Supabase와 배포 비밀값은 채팅이나 Git에 저장하지 않습니다. `.env.example`에는 이름만 제공하며 실제 값은 로컬·배포 환경변수로 설정합니다.
 
@@ -225,8 +246,16 @@ Vercel Functions는 `vercel.json`의 `hnd1`(도쿄)에서 실행하도록 설정
 
 `POST /api/records`는 정상 일반 사용자 세션에서 본인 기록을 저장합니다. `GET /api/records/:id`는 같은 그룹의 기록만 조회합니다. 목록은 `scope=mine|group&from=YYYY-MM-DD&to=YYYY-MM-DD`(최대42일) 또는 `scope=mine&month=YYYY-MM&limit=30&cursor=...`로 조회합니다. 두 형식을 혼용할 수 없습니다. 생성 시 같은 ID·입력을 유지해 재시도합니다. `PATCH /api/records/:id`는 편집 필드 전체와 expectedVersion, `DELETE`는 expectedVersion을 받습니다. 본인만 변경할 수 있고 버전 충돌은409와 currentRecord를 반환합니다. 월별 내 기록에서 수정·삭제를 연결했습니다. 충돌 시 초안을 유지하고 최신값을 확인하며 자동으로 덮어쓰지 않습니다. 달력·통계 화면은 후속입니다.
 
-CI의 database 작업은 기존 SQL 계약 검사 후 격리된 PostgREST14.18을 실행하고 `npx playwright test --config playwright.integration.config.ts`로 실제 HTTP/DB 통합5개를 검사합니다. 이 검사는 localhost의 전용 `jlpt_test` DB와 테스트 PostgREST URL을 모두 요구하며 운영 DB에서 실행할 수 없습니다. 자세한 계약과 검증 한계는 [결정 기록022](docs/decisions/022-record-api.md)에 남깁니다.
+CI의 database 작업은 기존 SQL 계약 검사 후 격리된 PostgREST14.18을 실행하고 `npx playwright test --config playwright.integration.config.ts`로 실제 HTTP/DB 통합6개를 검사합니다. 이 검사는 localhost의 전용 `jlpt_test` DB와 테스트 PostgREST URL을 모두 요구하며 운영 DB에서 실행할 수 없습니다. 자세한 계약과 검증 한계는 [결정 기록022](docs/decisions/022-record-api.md)에 남깁니다.
 
 ### 기록 입력·월별 내 기록 화면
 
 로그인 후 프로필 아래의 내 기록에서 월을 이동하거나 기록을 더 읽을 수 있습니다. 공부 기록 남기기는 기존 팝업을 사용하고 `/api/categories`의 최신 종류를 불러옵니다. 입력 검증·중복 제출 차단·실패 후 입력 유지와 같은 ID 재시도를 처리합니다. 저장 성공 후 해당 월의 목록을 새로 조회합니다. 기록용 TanStack Query 캐시는 메모리에서만 사용합니다. 결정 기록은 [023](docs/decisions/023-record-ui.md)을 참고합니다.
+
+### 멤버·달력 조회
+
+`GET /api/members`는 같은 그룹의 공개 프로필을 가입순으로 반환합니다.
+`GET /api/calendar?scope=mine|group&from=YYYY-MM-DD&to=YYYY-MM-DD`는 양 끝 포함
+최대42일의 날짜별 합계·고유 참여자 시간을 반환하며 빈 날짜도 포함합니다. 메모와 자격증명은
+읽지 않습니다. 정상 사용자 세션만 허용합니다. 화면 연결은 다음 단계이며
+[결정 기록027](docs/decisions/027-calendar-api-and-checkpoint.md)을 참고합니다.
