@@ -83,3 +83,17 @@ test('생성 내용의 각 변경은 다른 지문을 만든다', () => {
     recordFingerprint({ ...record, memo: '메모' }, key),
   );
 });
+
+test('다른 창의 계정 전환은 기록을 생성하기 전에 차단한다', async () => {
+  let writes = 0;
+  const db = {
+    resolveSession: async () => session,
+    saveRecord: async () => {
+      writes++;
+    },
+  };
+  await expect(
+    createRecord({ ...body, expectedUserId: body.id }, 'hash', db, key),
+  ).rejects.toMatchObject({ status: 409, code: 'ACCOUNT_CHANGED' });
+  expect(writes).toBe(0);
+});

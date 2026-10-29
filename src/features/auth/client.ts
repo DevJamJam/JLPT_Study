@@ -32,7 +32,7 @@ export function updateProfileEmoji(emoji: string) {
     'PATCH',
   );
 }
-async function jsonRequest<Data>(
+export async function jsonRequest<Data>(
   path: string,
   body?: unknown,
   signal?: AbortSignal,

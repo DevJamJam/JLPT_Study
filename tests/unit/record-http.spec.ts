@@ -79,6 +79,10 @@ function fixture(
       return options.dbError
         ? Response.json({ code: 'P0001', message: options.dbError }, { status: 400 })
         : Response.json(row);
+    if (url.pathname.endsWith('study_categories'))
+      return Response.json(
+        [{ id, name: '단어' }].slice(Number(url.searchParams.get('offset') ?? 0)),
+      );
     if (url.pathname.endsWith('study_records'))
       return Response.json(
         (options.missing ? [] : options.badRow ? [{ ...row, group_id: id }] : [row]).slice(
@@ -156,4 +160,12 @@ test('입력·업무 오류는 구분하고 잘못된 응답·연결 원문은50
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain('PRIVATE');
   }
+});
+
+test('공부 종류 목록은 정상 사용자 세션만 허용하고 공개 필드만 반환한다', async () => {
+  const response = await fixture().http.categories(req());
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ data: { categories: [{ id, name: '단어' }] } });
+  expect((await fixture({ limited: true }).http.categories(req())).status).toBe(403);
+  expect((await fixture().http.categories(req('', undefined, ''))).status).toBe(401);
 });

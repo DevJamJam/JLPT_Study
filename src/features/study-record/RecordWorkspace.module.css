@@ -1,0 +1,120 @@
+.workspace {
+  max-width: 760px;
+  margin: 24px auto 0;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+}
+.heading,
+.actions,
+.recordHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.heading h2 {
+  margin: 0;
+  font-size: 22px;
+}
+.help {
+  margin: 8px 0 16px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.list {
+  margin-top: 20px;
+}
+.record {
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
+}
+.record p {
+  margin: 10px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.record time {
+  font-size: 13px;
+  color: var(--muted);
+}
+.recordHeading strong {
+  color: var(--primary-strong);
+  font-size: 16px;
+}
+.empty {
+  padding: 28px 8px;
+  text-align: center;
+  color: var(--muted);
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0 0 18px;
+  font-size: 14px;
+  font-weight: 700;
+  min-width: 0;
+}
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--input-border);
+  border-radius: var(--radius-input);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 16px;
+}
+.field textarea {
+  resize: vertical;
+}
+.fields {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.error {
+  margin: 10px 0 16px;
+  color: var(--danger);
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.fieldError {
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 400;
+}
+.fullWidth {
+  width: 100%;
+  margin-top: 8px;
+}
+.link {
+  color: var(--primary-strong);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+}
+@media (max-width: 420px) {
+  .workspace {
+    padding: 20px 16px;
+  }
+  .heading h2 {
+    font-size: 20px;
+  }
+}

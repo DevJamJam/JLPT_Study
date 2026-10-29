@@ -9,6 +9,7 @@ import { authRequest, AuthClientError } from './client';
 import { ResetPinForm } from './ResetPinForm';
 import type { PublicAuthData } from './types';
 import styles from './Auth.module.css';
+import { RecordWorkspace } from '../study-record/RecordWorkspace';
 
 export function SessionHome() {
   const router = useRouter();
@@ -114,6 +115,13 @@ export function SessionHome() {
           </>
         )}
       </section>
+      {session && !session.profile.mustChangePin && (
+        <RecordWorkspace
+          key={`${session.profile.id}:${session.group.id}`}
+          userId={session.profile.id}
+          groupId={session.group.id}
+        />
+      )}
       {settingsOpen && session && !session.profile.mustChangePin && (
         <ProfileSettings
           profile={session.profile}

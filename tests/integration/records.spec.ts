@@ -100,6 +100,15 @@ test('실제 REST/DB의 생성·재시도·현재값·삭제된 요청과 일일
     userId: outsider,
     groupId: otherGroup,
   };
+  const categories = await http.categories(req());
+  expect(categories.status).toBe(200);
+  expect((await categories.json()).data.categories).toContainEqual({
+    id: category,
+    name: '통합검사 종류46',
+  });
+  const changed = await http.create(req('', { ...input, expectedUserId: outsider }));
+  expect(changed.status).toBe(409);
+  expect((await changed.json()).error.code).toBe('ACCOUNT_CHANGED');
   const created = await http.create(req('', input));
   expect(created.status).toBe(200);
   expect((await created.json()).data.record).toMatchObject({

@@ -1,4 +1,7 @@
 import { test, expect } from '@playwright/test';
+import { stubRecordReads } from './record-fixture';
+
+test.beforeEach(async ({ page }) => stubRecordReads(page));
 
 const data = {
   profile: {
