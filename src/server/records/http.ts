@@ -5,11 +5,13 @@ import { clearCookie, failure, json, tokenHash } from '../auth/http';
 import { readMutationJson } from '../auth/request-guard';
 import { createRecord, RecordRequestError } from './create';
 import { createRecordDatabase } from './database';
+import { mutateRecord } from './mutate';
 import { isUuid, parseRecordQuery } from './query';
 
 const messages: Record<string, string> = {
   VALIDATION_ERROR: '공부 기록의 입력과 조회 조건을 확인해주세요.',
   IDEMPOTENCY_CONFLICT: '저장 요청 내용이 바뀌었어요. 새 요청으로 다시 시도해주세요.',
+  CONFLICT: '다른 기기에서 변경됐어요. 최신 기록을 확인해 주세요.',
   AUTH_UNAVAILABLE: '공부 기록 서비스를 잠시 이용할 수 없어요.',
 };
 
@@ -18,7 +20,7 @@ export function createRecordsHttp(
   transport: typeof fetch = fetch,
 ) {
   async function handle(
-    action: 'create' | 'get' | 'list' | 'categories',
+    action: 'create' | 'update' | 'delete' | 'get' | 'list' | 'categories',
     request: NextRequest,
     id?: string,
   ) {
@@ -31,8 +33,9 @@ export function createRecordsHttp(
         const hash = tokenHash(request, production);
         if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
         const config = loadAuthConfig(env);
-        const body =
-          action === 'create' ? await readMutationJson(request, config.appOrigin) : undefined;
+        const body = ['create', 'update', 'delete'].includes(action)
+          ? await readMutationJson(request, config.appOrigin)
+          : undefined;
         const db = createRecordDatabase(config, transport, (milliseconds) => {
           dbTime += milliseconds;
           dbCalls++;
@@ -41,6 +44,8 @@ export function createRecordsHttp(
           return json({
             data: { record: await createRecord(body, hash, db, config.idempotencyKey) },
           });
+        if (action === 'update' || action === 'delete')
+          return json({ data: await mutateRecord(action, id, body, hash, db) });
         const session = await db.resolveSession(hash);
         if (session.profile.mustChangePin) throw new RecordRequestError(403, 'PIN_CHANGE_REQUIRED');
         if (action === 'categories')
@@ -67,6 +72,8 @@ export function createRecordsHttp(
           if (Object.hasOwn(messages, error.code)) data.error.message = messages[error.code];
           if (error instanceof RecordRequestError && error.fieldErrors)
             data.error.fieldErrors = error.fieldErrors;
+          if (error instanceof RecordRequestError && error.currentRecord)
+            data.error.currentRecord = error.currentRecord;
           const response = json(data, result.status);
           if (response.status === 401) clearCookie(response, production);
           return response;
@@ -83,6 +90,8 @@ export function createRecordsHttp(
   }
   return {
     create: (request: NextRequest) => handle('create', request),
+    update: (request: NextRequest, id: string) => handle('update', request, id),
+    delete: (request: NextRequest, id: string) => handle('delete', request, id),
     get: (request: NextRequest, id: string) => handle('get', request, id),
     list: (request: NextRequest) => handle('list', request),
     categories: (request: NextRequest) => handle('categories', request),

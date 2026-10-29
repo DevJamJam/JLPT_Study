@@ -8,3 +8,13 @@ export async function GET(request: NextRequest, context: { params: Promise<{ id:
   const { id } = await context.params;
   return createRecordsHttp(process.env).get(request, id);
 }
+
+export async function PATCH(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  return createRecordsHttp(process.env).update(request, id);
+}
+
+export async function DELETE(request: NextRequest, context: { params: Promise<{ id: string }> }) {
+  const { id } = await context.params;
+  return createRecordsHttp(process.env).delete(request, id);
+}

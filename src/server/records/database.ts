@@ -5,6 +5,7 @@ import { createDatabaseRequest } from '../database';
 import { validateRecordInput } from '../../features/study-record/validation';
 import type { StudyRecord, RecordPage } from '../../features/study-record/types';
 import type { CreateRecordDatabase } from './create';
+import type { RecordInput } from '../../features/study-record/validation';
 import { cursorFilter, encodeRecordCursor, isTimestamp, isUuid, type RecordQuery } from './query';
 
 const unavailable = () => new AuthServiceError(503, 'AUTH_UNAVAILABLE');
@@ -60,6 +61,19 @@ export function recordFromRow(row: unknown, groupId: string, actorId?: string): 
 }
 
 export type RecordDatabase = CreateRecordDatabase<StudyRecord> & {
+  updateRecord(input: {
+    actorId: string;
+    groupId: string;
+    id: string;
+    record: RecordInput;
+    expectedVersion: number;
+  }): Promise<StudyRecord>;
+  deleteRecord(input: {
+    actorId: string;
+    groupId: string;
+    id: string;
+    expectedVersion: number;
+  }): Promise<void>;
   getRecord(id: string, groupId: string): Promise<StudyRecord>;
   listCategories(): Promise<{ id: string; name: string }[]>;
   listRecords(query: RecordQuery, actorId: string, groupId: string): Promise<RecordPage>;
@@ -90,6 +104,44 @@ export function createRecordDatabase(
   return {
     resolveSession: auth.resolveSession,
     getRecord,
+    async updateRecord(input) {
+      const record = input.record;
+      const result = await request('rpc/save_record', {
+        p_actor_user_id: input.actorId,
+        p_group_id: input.groupId,
+        p_id: input.id,
+        p_study_date: record.studyDate,
+        p_minutes: record.minutes,
+        p_category_id: record.categoryId,
+        p_start_time: record.startTime,
+        p_quantity: record.quantity,
+        p_quantity_unit: record.quantityUnit,
+        p_memo: record.memo,
+        p_create_fingerprint: null,
+        p_expected_version: input.expectedVersion,
+      });
+      const row: unknown = Array.isArray(result) && result.length === 1 ? result[0] : result;
+      if (
+        !object(row) ||
+        row.id !== input.id ||
+        row.user_id !== input.actorId ||
+        row.group_id !== input.groupId ||
+        row.version !== input.expectedVersion + 1
+      )
+        throw unavailable();
+      const saved = await getRecord(input.id, input.groupId);
+      if (saved.userId !== input.actorId) throw unavailable();
+      return saved;
+    },
+    async deleteRecord(input) {
+      const result = await request('rpc/delete_record', {
+        p_actor_user_id: input.actorId,
+        p_group_id: input.groupId,
+        p_id: input.id,
+        p_expected_version: input.expectedVersion,
+      });
+      if (result !== true) throw unavailable();
+    },
     async listCategories() {
       const result: { id: string; name: string }[] = [];
       const seen = new Set<string>();

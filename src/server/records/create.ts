@@ -1,5 +1,6 @@
 import { createHmac } from 'node:crypto';
 import { validateRecordInput, type RecordInput } from '../../features/study-record/validation';
+import type { StudyRecord } from '../../features/study-record/types';
 import type { PublicAuthData } from '../../features/auth/types';
 
 const uuid = /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i;
@@ -9,6 +10,7 @@ export class RecordRequestError extends Error {
     public readonly status: number,
     public readonly code: string,
     public readonly fieldErrors?: Record<string, string>,
+    public readonly currentRecord?: StudyRecord,
   ) {
     super(code);
   }
