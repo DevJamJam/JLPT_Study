@@ -30,6 +30,10 @@ function Records({ userId, groupId }: { userId: string; groupId: string }) {
   const [today, setToday] = useState(seoulDateKey);
   const [month, setMonth] = useState(() => seoulDateKey().slice(0, 7));
   const [open, setOpen] = useState(false);
+  const [savedNotice, setSavedNotice] = useState(0);
+  useEffect(() => {
+    if (savedNotice) void toast('공부 기록을 저장했어요.');
+  }, [savedNotice]);
   const client = useQueryClient();
   useEffect(() => {
     function refreshDay() {
@@ -75,7 +79,7 @@ function Records({ userId, groupId }: { userId: string; groupId: string }) {
     void client
       .cancelQueries({ queryKey: ['records', userId, groupId] })
       .then(() => client.invalidateQueries({ queryKey: ['records', userId, groupId] }));
-    void toast('공부 기록을 저장했어요.');
+    setSavedNotice((value) => value + 1);
   }
   return (
     <section className={styles.workspace} aria-labelledby="records-title">
