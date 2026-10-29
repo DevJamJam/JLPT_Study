@@ -45,7 +45,6 @@ function fixture(
     resetError?: string;
     emojiError?: string;
     badEmojiResult?: boolean;
-    recordError?: string;
     attemptExpired?: boolean;
   } = {},
 ) {
@@ -141,69 +140,11 @@ function fixture(
     if (path === 'study_groups')
       return Response.json([{ id: groupId, name: 'JLPT STUDY ROOM', max_members: 15 }]);
     if (path === 'group_members') return Response.json([{ user_id: id }]);
-    if (path === 'rpc/save_record') {
-      if (options.recordError)
-        return Response.json({ code: 'P0001', message: options.recordError }, { status: 400 });
-      return Response.json({
-        id: body?.p_id,
-        group_id: body?.p_group_id,
-        user_id: body?.p_actor_user_id,
-        study_date: body?.p_study_date,
-        minutes: body?.p_minutes,
-        category_id: body?.p_category_id,
-        start_time: null,
-        quantity: null,
-        quantity_unit: null,
-        memo: null,
-        version: 1,
-        created_at: expires,
-        updated_at: expires,
-        create_fingerprint: 'DO_NOT_EXPOSE',
-      });
-    }
-    if (path === 'study_categories') return Response.json([{ id: groupId, name: '단어' }]);
     throw new Error(`Unexpected path: ${path}`);
   };
   return { calls, http: createAuthHttp(env, transport) };
 }
 
-test('기록 API는 세션 주체를 DB에 주입하고 지문을 응답에서 제외한다', async () => {
-  const { http, calls } = fixture();
-  const response = await http.createRecord(
-    request(
-      'records',
-      {
-        id,
-        studyDate: '2026-10-01',
-        categoryId: groupId,
-        minutes: 30,
-        userId: 'forged',
-        groupId: 'forged',
-      },
-      { cookie: `__Host-jlpt_session=${token}` },
-    ),
-  );
-  expect(response.status).toBe(200);
-  const json = await response.json();
-  expect(json.data.record).toMatchObject({ id, userId: id, groupId, categoryName: '단어' });
-  expect(JSON.stringify(json)).not.toContain('DO_NOT_EXPOSE');
-  expect(calls.find((call) => call.path === 'rpc/save_record')?.body).toMatchObject({
-    p_actor_user_id: id,
-    p_group_id: groupId,
-  });
-});
-
-test('기록 API는 제한 세션과 일일 한도 오류를 거부한다', async () => {
-  const body = { id, studyDate: '2026-10-01', categoryId: groupId, minutes: 30 };
-  const headers = { cookie: `__Host-jlpt_session=${token}` };
-  const limited = fixture({ limited: true });
-  expect((await limited.http.createRecord(request('records', body, headers))).status).toBe(403);
-  expect(limited.calls.some((call) => call.path === 'rpc/save_record')).toBe(false);
-  const over = fixture({ recordError: 'DAILY_LIMIT_EXCEEDED' });
-  const result = await over.http.createRecord(request('records', body, headers));
-  expect(result.status).toBe(409);
-  expect((await result.json()).error.code).toBe('DAILY_LIMIT_EXCEEDED');
-});
 const loginBody = { nickname: '유리', pin: '0123' };
 const expectedData = (limited = false) => ({
   profile: { id, nickname: '유리', emoji: '🐰', mustChangePin: limited },

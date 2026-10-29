@@ -8,7 +8,6 @@ import { RequestGuardError, readMutationJson } from './request-guard';
 import { authenticate, AuthServiceError } from './service';
 import { sessionCookie } from './session-cookie';
 import { createSupabaseAuthDatabase } from './supabase-database';
-import { createRecord, RecordRequestError } from '../records/create';
 
 type Environment = Record<string, string | undefined>;
 const messages: Record<string, string> = {
@@ -52,7 +51,7 @@ export function trustedAuthSource(request: Request, env: Environment) {
   throw new AuthServiceError(503, 'AUTH_UNAVAILABLE');
 }
 
-function json(body: unknown, status = 200) {
+export function json(body: unknown, status = 200) {
   return NextResponse.json(body, {
     status,
     headers: {
@@ -62,11 +61,8 @@ function json(body: unknown, status = 200) {
     },
   });
 }
-function failure(error: unknown) {
-  const known =
-    error instanceof AuthServiceError ||
-    error instanceof RequestGuardError ||
-    error instanceof RecordRequestError;
+export function failure(error: unknown) {
+  const known = error instanceof AuthServiceError || error instanceof RequestGuardError;
   const code =
     error instanceof AuthConfigError
       ? 'AUTH_NOT_CONFIGURED'
@@ -78,9 +74,6 @@ function failure(error: unknown) {
       error: {
         code,
         message: messages[code],
-        ...(error instanceof RecordRequestError && error.fieldErrors
-          ? { fieldErrors: error.fieldErrors }
-          : {}),
         ...(error instanceof AuthServiceError && error.retryAt ? { retryAt: error.retryAt } : {}),
       },
     },
@@ -98,7 +91,7 @@ function failure(error: unknown) {
   }
   return response;
 }
-function tokenHash(request: NextRequest, production: boolean) {
+export function tokenHash(request: NextRequest, production: boolean) {
   const { name } = sessionCookie(new Date(0), production);
   const value = request.cookies.get(name)?.value;
   if (!value) return null;
@@ -108,7 +101,7 @@ function tokenHash(request: NextRequest, production: boolean) {
     return null;
   }
 }
-function clearCookie(response: NextResponse, production: boolean) {
+export function clearCookie(response: NextResponse, production: boolean) {
   const { name, options } = sessionCookie(new Date(0), production);
   response.cookies.set(name, '', { ...options, maxAge: 0 });
 }
@@ -156,21 +149,6 @@ function createAuthHandlers(
     }
   }
   return {
-    async createRecord(request: NextRequest) {
-      try {
-        const config = loadAuthConfig(env);
-        const body = await readMutationJson(request, config.appOrigin);
-        const hash = tokenHash(request, production);
-        if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
-        const db = createSupabaseAuthDatabase(config, undefined, transport, observeRequest);
-        return json(
-          { data: { record: await createRecord(body, hash, db, config.idempotencyKey) } },
-          200,
-        );
-      } catch (error) {
-        return failure(error);
-      }
-    },
     login: (request: NextRequest) => auth('login', request),
     join: (request: NextRequest) => auth('join', request),
     completeReset: (request: NextRequest) => updatePin('reset', request),

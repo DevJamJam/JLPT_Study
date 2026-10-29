@@ -21,3 +21,18 @@ test('실제 서버는 가입 경로의 GET을405로 차단한다', async ({ req
   expect((await request.get('/api/me/emoji')).status()).toBe(405);
   expect((await request.post('/api/me/emoji', { data: { emoji: '🐱' } })).status()).toBe(405);
 });
+
+test('기록 API의 실제 라우트는 무인증 조회와 지원하지 않는 메서드를 거부한다', async ({
+  request,
+}) => {
+  for (const path of [
+    '/api/records?scope=mine&month=2026-09',
+    '/api/records/46000000-0000-4000-8000-000000000003',
+  ]) {
+    const response = await request.get(path);
+    expect(response.status()).toBe(401);
+    expect((await response.json()).error.code).toBe('UNAUTHORIZED');
+    expect(response.headers()['cache-control']).toContain('no-store');
+  }
+  expect((await request.patch('/api/records', { data: {} })).status()).toBe(405);
+});
