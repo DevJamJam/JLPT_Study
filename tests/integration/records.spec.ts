@@ -77,9 +77,14 @@ const transport: typeof fetch = async (input, init) => {
   return fetch(target, init);
 };
 const http = createRecordsHttp(env, transport);
-function req(query = '', body?: unknown, cookieToken = token) {
+function req(
+  query = '',
+  body?: unknown,
+  cookieToken = token,
+  method = body === undefined ? 'GET' : 'POST',
+) {
   return new NextRequest(`${origin}/api/records${query}`, {
-    method: body === undefined ? 'GET' : 'POST',
+    method,
     headers: {
       origin,
       'content-type': 'application/json',
@@ -163,6 +168,65 @@ test('실제 DB의 기간501건을 잘라내지 않고 그룹을 제한한다', 
   expect(data.records).toHaveLength(501);
   expect(data.nextCursor).toBeNull();
   expect(data.records.every((record: { groupId: string }) => record.groupId === group)).toBe(true);
+});
+
+test('수정·삭제 API의 실제 DB 권한·동시 버전·재시도·일일 상한', async () => {
+  const id = '46000000-0000-4000-8000-000000000750';
+  const input = { id, studyDate: '2026-09-20', minutes: 30, categoryId: category };
+  expect((await http.create(req('', input))).status).toBe(200);
+  const update = (expectedVersion: number, minutes: number) =>
+    http.update(
+      req(
+        '',
+        { ...input, expectedVersion, minutes, userId: outsider, groupId: otherGroup },
+        token,
+        'PATCH',
+      ),
+      id,
+    );
+  const competing = await Promise.all([update(1, 40), update(1, 50)]);
+  expect(competing.map((r) => r.status).sort()).toEqual([200, 409]);
+  const conflict = await competing.find((r) => r.status === 409)!.json();
+  expect(conflict.error).toMatchObject({
+    code: 'CONFLICT',
+    currentRecord: { id, userId: user, version: 2 },
+  });
+  const over = await http.create(
+    req('', { ...input, id: '46000000-0000-4000-8000-000000000751', minutes: 1390 }),
+  );
+  expect(over.status).toBe(200);
+  const exceeded = await update(2, 1440);
+  expect(exceeded.status).toBe(409);
+  expect((await exceeded.json()).error.code).toBe('DAILY_LIMIT_EXCEEDED');
+  const latest = (await (await http.get(req(), id)).json()).data.record;
+  const staleDelete = await http.delete(req('', { expectedVersion: 1 }, token, 'DELETE'), id);
+  expect(staleDelete.status).toBe(409);
+  expect((await staleDelete.json()).error.currentRecord.version).toBe(latest.version);
+  for (const target of [
+    '46000000-0000-4000-8000-000000001000',
+    '46000000-0000-4000-8000-000000000900',
+  ]) {
+    expect(
+      (await http.update(req('', { ...input, expectedVersion: 1 }, token, 'PATCH'), target)).status,
+    ).toBe(403);
+    expect(
+      (await http.delete(req('', { expectedVersion: 1 }, token, 'DELETE'), target)).status,
+    ).toBe(403);
+  }
+  expect(
+    (await http.update(req('', { ...input, expectedVersion: 1 }, limitedToken, 'PATCH'), id))
+      .status,
+  ).toBe(403);
+  expect(
+    (await http.delete(req('', { expectedVersion: latest.version }, token, 'DELETE'), id)).status,
+  ).toBe(200);
+  expect(
+    (await http.delete(req('', { expectedVersion: latest.version }, token, 'DELETE'), id)).status,
+  ).toBe(200);
+  expect((await http.get(req(), id)).status).toBe(404);
+  expect((await update(latest.version, 30)).status).toBe(404);
+  const recreated = await http.create(req('', input));
+  expect((await recreated.json()).error.code).toBe('RECORD_DELETED');
 });
 
 test('다른 그룹은404, 같은 그룹 기록은 조회 가능, 제한·폐기 세션은 차단한다', async () => {

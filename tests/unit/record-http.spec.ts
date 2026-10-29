@@ -39,9 +39,10 @@ function req(
   body?: unknown,
   cookie = `__Host-jlpt_session=${token}`,
   requestOrigin = origin,
+  method = body === undefined ? 'GET' : 'POST',
 ) {
   return new NextRequest(`${origin}/api/records${query}`, {
-    method: body === undefined ? 'GET' : 'POST',
+    method,
     headers: { origin: requestOrigin, cookie, 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
@@ -75,6 +76,10 @@ function fixture(
     if (url.pathname.endsWith('study_groups'))
       return Response.json([{ id: groupId, name: '검사', max_members: 15 }]);
     if (url.pathname.endsWith('group_members')) return Response.json([{ user_id: userId }]);
+    if (url.pathname.endsWith('delete_record'))
+      return options.dbError
+        ? Response.json({ code: 'P0001', message: options.dbError }, { status: 400 })
+        : Response.json(true);
     if (url.pathname.endsWith('save_record'))
       return options.dbError
         ? Response.json({ code: 'P0001', message: options.dbError }, { status: 400 })
@@ -168,4 +173,102 @@ test('공부 종류 목록은 정상 사용자 세션만 허용하고 공개 필
   expect(await response.json()).toEqual({ data: { categories: [{ id, name: '단어' }] } });
   expect((await fixture({ limited: true }).http.categories(req())).status).toBe(403);
   expect((await fixture().http.categories(req('', undefined, ''))).status).toBe(401);
+});
+
+function mutation(body: unknown, method = 'PATCH', cookie?: string, requestOrigin?: string) {
+  return req('', body, cookie, requestOrigin, method);
+}
+
+test('수정·삭제는 세션 주체와 version을 RPC에 전달한다', async () => {
+  const { http, calls } = fixture();
+  const response = await http.update(
+    mutation({ ...input, expectedVersion: 1, userId: 'forged', groupId: 'forged' }),
+    id,
+  );
+  expect(response.status).toBe(200);
+  expect((await response.json()).data.record.version).toBe(2);
+  expect(calls.find((c) => c.url.pathname.endsWith('save_record'))?.body).toMatchObject({
+    p_actor_user_id: userId,
+    p_group_id: groupId,
+    p_expected_version: 1,
+    p_create_fingerprint: null,
+  });
+  const deleted = await http.delete(mutation({ expectedVersion: 2 }, 'DELETE'), id);
+  expect(deleted.status).toBe(200);
+  expect(await deleted.json()).toEqual({ data: { deletedId: id } });
+  expect(deleted.headers.get('cache-control')).toContain('no-store');
+});
+
+test('수정·삭제는 양의 DB 정수 버전·UUID·계정 일치를 필수로 검사한다', async () => {
+  for (const action of ['update', 'delete'] as const) {
+    for (const expectedVersion of [undefined, null, 0, -1, 1.5, '1', 2147483647]) {
+      const { http, calls } = fixture();
+      expect((await http[action](mutation({ ...input, expectedVersion }), id)).status).toBe(400);
+      expect(calls.some((c) => /save_record|delete_record/.test(c.url.pathname))).toBe(false);
+    }
+    const { http, calls } = fixture();
+    expect((await http[action](mutation({ ...input, expectedVersion: 1 }), 'bad')).status).toBe(
+      400,
+    );
+    expect(
+      (await http[action](mutation({ ...input, expectedVersion: 1, expectedUserId: id }), id))
+        .status,
+    ).toBe(409);
+    expect(calls.some((c) => /save_record|delete_record/.test(c.url.pathname))).toBe(false);
+  }
+});
+
+test('수정·삭제의 충돌은 공개 최신 기록을 반환하고 재전송·자동 덮어쓰기를 하지 않는다', async () => {
+  for (const action of ['update', 'delete'] as const) {
+    const { http, calls } = fixture({ dbError: 'CONFLICT' });
+    const response = await http[action](mutation({ ...input, expectedVersion: 1 }), id);
+    expect(response.status).toBe(409);
+    expect((await response.json()).error).toMatchObject({
+      code: 'CONFLICT',
+      currentRecord: { id, version: 2 },
+    });
+    expect(calls.filter((c) => /save_record|delete_record/.test(c.url.pathname))).toHaveLength(1);
+    for (const code of ['FORBIDDEN', 'NOT_FOUND']) {
+      const result = await fixture({ dbError: code }).http[action](
+        mutation({ ...input, expectedVersion: 1 }),
+        id,
+      );
+      expect(result.status).toBe(code === 'FORBIDDEN' ? 403 : 404);
+      expect((await result.json()).error.currentRecord).toBeUndefined();
+    }
+    expect(
+      (
+        await fixture({ dbError: 'CONFLICT', missing: true }).http[action](
+          mutation({ ...input, expectedVersion: 1 }),
+          id,
+        )
+      ).status,
+    ).toBe(404);
+    const invalid = await fixture({ dbError: 'CONFLICT', badRow: true }).http[action](
+      mutation({ ...input, expectedVersion: 1 }),
+      id,
+    );
+    expect(invalid.status).toBe(503);
+    expect(await invalid.text()).not.toContain('PRIVATE');
+  }
+});
+
+test('수정·삭제도 제한 세션·무쿠키·외부 Origin과 JSON 이외 요청을 거부한다', async () => {
+  for (const action of ['update', 'delete'] as const) {
+    const body = { ...input, expectedVersion: 1 };
+    expect((await fixture({ limited: true }).http[action](mutation(body), id)).status).toBe(403);
+    for (const cookie of ['', '__Host-jlpt_admin_session=' + token]) {
+      const { http, calls } = fixture();
+      expect((await http[action](mutation(body, 'PATCH', cookie), id)).status).toBe(401);
+      expect(calls).toHaveLength(0);
+    }
+    const { http, calls } = fixture();
+    expect(
+      (await http[action](mutation(body, 'PATCH', undefined, 'https://evil.example'), id)).status,
+    ).toBe(403);
+    const bad = mutation(body);
+    bad.headers.set('content-type', 'text/plain');
+    expect((await http[action](bad, id)).status).toBe(415);
+    expect(calls).toHaveLength(0);
+  }
 });
