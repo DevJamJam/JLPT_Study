@@ -79,6 +79,12 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
   }, [route.canonical, route.invalidPopup]);
   useEffect(() => {
     const protect = (event: PopStateEvent) => {
+      console.info(
+        'calendar traversal guard',
+        bypassPop.current,
+        !!guard.current,
+        guard.current?.protected(),
+      );
       if (bypassPop.current) {
         bypassPop.current = false;
         return;

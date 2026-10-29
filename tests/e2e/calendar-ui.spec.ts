@@ -258,6 +258,7 @@ test('상세 수정은 새 날짜로 돌아가고 중첩 팝업을 만들지 않
 });
 
 test('뒤로가기 취소는 초안을 유지하고 제출 중에는 팝업을 유지한다', async ({ page }) => {
+  page.on('console', (message) => console.log('calendar history diagnostic:', message.text()));
   const { state } = await setup(page);
   const form = await newForm(page);
   await form
@@ -319,11 +320,15 @@ test('갱신 실패는 이전 기록 유지, 세션 만료는 이전 기록 숨�
   await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
   state.calendarStatus = 503;
   await page.getByRole('button', { name: '달력 새로고침' }).click();
-  await expect(page.getByRole('alert')).toContainText('달력을 불러오지 못했어요');
+  await expect(page.getByRole('region', { name: '공부 달력' }).getByRole('alert')).toContainText(
+    '달력을 불러오지 못했어요',
+  );
   await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
   state.calendarStatus = 401;
   await page.getByRole('button', { name: '달력 다시 불러오기' }).click();
-  await expect(page.getByRole('alert')).toContainText('세션을 다시 확인');
+  await expect(page.getByRole('region', { name: '공부 달력' }).getByRole('alert')).toContainText(
+    '세션을 다시 확인',
+  );
   await expect(day(page)).toBeDisabled();
   await expect(day(page).locator('[title="공부하는 토끼"]')).toHaveCount(0);
 });
