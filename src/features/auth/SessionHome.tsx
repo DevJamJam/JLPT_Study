@@ -9,9 +9,15 @@ import { authRequest, AuthClientError } from './client';
 import { ResetPinForm } from './ResetPinForm';
 import type { PublicAuthData } from './types';
 import styles from './Auth.module.css';
+import { StudyShell, type MainView } from '@/components/layout/StudyShell';
+import { CalendarWorkspace } from '../calendar/CalendarWorkspace';
+import type { AddRecordHandle } from '../calendar/navigation';
+import { useSearchParams } from 'next/navigation';
 import { RecordWorkspace } from '../study-record/RecordWorkspace';
 
-export function SessionHome() {
+export function SessionHome({ initialView = 'home' }: { initialView?: MainView }) {
+  const params = useSearchParams();
+  const workspace = useRef<AddRecordHandle | null>(null);
   const router = useRouter();
   const [session, setSession] = useState<PublicAuthData | null>(null);
   const [error, setError] = useState('');
@@ -54,74 +60,76 @@ export function SessionHome() {
       setPending(false);
     }
   }
-  return (
-    <main className={styles.main}>
-      <header className={styles.sessionHeader}>
-        <span className={styles.brand}>JLPT STUDY ROOM</span>
-        {session && !session.profile.mustChangePin && (
-          <button
-            type="button"
-            className={styles.avatar}
-            aria-label="내 설정 열기"
-            onClick={() => {
-              setSettingsOpen(true);
-            }}
-          >
-            <span aria-hidden="true">{session.profile.emoji}</span>
-          </button>
-        )}
-      </header>
-      <section className={styles.card} aria-labelledby="welcome-title">
-        {session ? (
-          <>
-            <span className={styles.profileEmoji} aria-hidden="true">
-              {session.profile.emoji}
-            </span>
-            <h1 id="welcome-title">
-              {session.profile.mustChangePin
-                ? '간편 비밀번호 변경이 필요해요'
-                : `${session.profile.nickname}님, 반가워요`}
-            </h1>
-            <p className={styles.intro}>
-              {session.profile.mustChangePin
-                ? '새 비밀번호를 정하면 공부방을 다시 이용할 수 있어요.'
-                : session.group.name}
+  const normal = !!session && !session.profile.mustChangePin;
+  const body = (
+    <>
+      {(!normal || initialView === 'home') && (
+        <section className={styles.card} aria-labelledby="welcome-title">
+          {session ? (
+            <>
+              <span className={styles.profileEmoji} aria-hidden="true">
+                {session.profile.emoji}
+              </span>
+              <h1 id="welcome-title">
+                {session.profile.mustChangePin
+                  ? '간편 비밀번호 변경이 필요해요'
+                  : `${session.profile.nickname}님, 반가워요`}
+              </h1>
+              <p className={styles.intro}>
+                {session.profile.mustChangePin
+                  ? '새 비밀번호를 정하면 공부방을 다시 이용할 수 있어요.'
+                  : session.group.name}
+              </p>
+              {session.profile.mustChangePin && (
+                <ResetPinForm
+                  onBusyChange={setResetBusy}
+                  onComplete={() => {
+                    setSession(null);
+                    setRetry((value) => value + 1);
+                  }}
+                />
+              )}
+              {!session.profile.mustChangePin && <p>함께 공부하고, 차곡차곡 기록해요.</p>}
+              <Button variant="secondary" onClick={logout} disabled={pending || resetBusy}>
+                {pending ? '로그아웃 중…' : '로그아웃'}
+              </Button>
+            </>
+          ) : (
+            <p id="welcome-title" role="status">
+              {error ? '연결을 다시 확인해주세요.' : '공부방을 확인하고 있어요…'}
             </p>
-            {session.profile.mustChangePin && (
-              <ResetPinForm
-                onBusyChange={setResetBusy}
-                onComplete={() => {
-                  setSession(null);
-                  setRetry((value) => value + 1);
-                }}
-              />
-            )}
-            {!session.profile.mustChangePin && <p>함께 공부하고, 차곡차곡 기록해요.</p>}
-            <Button variant="secondary" onClick={logout} disabled={pending || resetBusy}>
-              {pending ? '로그아웃 중…' : '로그아웃'}
-            </Button>
-          </>
-        ) : (
-          <p id="welcome-title" role="status">
-            {error ? '연결을 다시 확인해주세요.' : '공부방을 확인하고 있어요…'}
-          </p>
-        )}
-        {error && (
-          <>
-            <p role="alert" className={styles.error}>
-              {error}
-            </p>
-            {!session && <Button onClick={() => setRetry((value) => value + 1)}>다시 시도</Button>}
-          </>
-        )}
-      </section>
-      {session && !session.profile.mustChangePin && (
-        <RecordWorkspace
-          key={`${session.profile.id}:${session.group.id}`}
-          userId={session.profile.id}
-          groupId={session.group.id}
-        />
+          )}
+          {error && (
+            <>
+              <p role="alert" className={styles.error}>
+                {error}
+              </p>
+              {!session && (
+                <Button onClick={() => setRetry((value) => value + 1)}>다시 시도</Button>
+              )}
+            </>
+          )}
+        </section>
       )}
+      {normal &&
+        session &&
+        (initialView === 'calendar' ? (
+          <CalendarWorkspace
+            ref={workspace}
+            key={`${session.profile.id}:${session.group.id}`}
+            userId={session.profile.id}
+            groupId={session.group.id}
+            emoji={session.profile.emoji}
+            nickname={session.profile.nickname}
+          />
+        ) : (
+          <RecordWorkspace
+            ref={workspace}
+            key={`${session.profile.id}:${session.group.id}`}
+            userId={session.profile.id}
+            groupId={session.group.id}
+          />
+        ))}
       {settingsOpen && session && !session.profile.mustChangePin && (
         <ProfileSettings
           profile={session.profile}
@@ -148,6 +156,34 @@ export function SessionHome() {
           logoutError={error}
         />
       )}
+    </>
+  );
+  if (normal && session)
+    return (
+      <StudyShell
+        active={initialView}
+        emoji={session.profile.emoji}
+        loggedIn
+        theme={
+          initialView === 'calendar' ? (params.get('view') === 'week' ? 'week' : 'month') : 'plain'
+        }
+        onSettings={() => setSettingsOpen(true)}
+        onNavigate={(view) =>
+          router.push(view === 'home' ? '/' : view === 'me' ? '/me' : '/calendar')
+        }
+        onAdd={() => workspace.current?.addToday()}
+        addLabel="새 공부 기록"
+        disabledViews={['study']}
+      >
+        {body}
+      </StudyShell>
+    );
+  return (
+    <main className={styles.main}>
+      <header className={styles.sessionHeader}>
+        <span className={styles.brand}>JLPT STUDY ROOM</span>
+      </header>
+      {body}
     </main>
   );
 }

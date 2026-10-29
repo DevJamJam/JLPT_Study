@@ -19,7 +19,7 @@ import {
   duration,
   type PreviewRecord,
 } from './fixtures';
-import styles from './DesignPreview.module.css';
+import styles from '@/styles/notebook.module.css';
 
 type CalendarView = 'group' | 'mine' | 'week';
 type Modal =

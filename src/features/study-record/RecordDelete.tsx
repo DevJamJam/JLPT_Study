@@ -1,21 +1,24 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useImperativeHandle, useRef, useState, type Ref } from 'react';
 import { Button } from '@/components/ui/Button';
 import { StudyDialog } from '@/components/ui/StudyDialog';
 import { confirmRecordDelete } from '@/lib/notifications';
 import { AuthClientError } from '../auth/client';
 import { deleteRecordRequest, readOwnRecord, recordError } from './client';
+import type { NavigationGuard } from '../calendar/navigation';
 import type { StudyRecord } from './types';
 import styles from './RecordWorkspace.module.css';
 
 export function RecordDelete({
   record: initialRecord,
+  navigationRef,
   userId,
   groupId,
   onClose,
   onDeleted,
 }: {
+  navigationRef?: Ref<NavigationGuard>;
   record: StudyRecord;
   userId: string;
   groupId: string;
@@ -29,6 +32,12 @@ export function RecordDelete({
   const [terminal, setTerminal] = useState(false);
   const [expired, setExpired] = useState(false);
   const inFlight = useRef(false);
+  useImperativeHandle(navigationRef, () => ({
+    close: (next) => {
+      if (!inFlight.current) (next ?? onClose)();
+    },
+    protected: () => inFlight.current,
+  }));
   async function remove() {
     if (inFlight.current || conflict || terminal) return;
     inFlight.current = true;
