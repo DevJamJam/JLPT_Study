@@ -379,7 +379,19 @@ test('삭제 취소·실패 재시도·중복 차단·마지막 기록 빈 상�
   const dialog = page.getByRole('dialog', { name: '공부 기록 삭제', exact: true });
   await dialog.getByRole('button', { name: '기록 삭제', exact: true }).click();
   await expect(page.getByText('삭제한 기록은 복구할 수 없어요.', { exact: false })).toBeVisible();
-  await page.screenshot({ path: `test-results/${info.project.name}-record-delete-confirm.png` });
+  await expect
+    .poll(() =>
+      page
+        .locator('.swal2-popup')
+        .evaluate((element) =>
+          element.getAnimations().every((animation) => animation.playState !== 'running'),
+        ),
+    )
+    .toBe(true);
+  await page.screenshot({
+    path: `test-results/${info.project.name}-record-delete-confirm.png`,
+    animations: 'disabled',
+  });
   await page.getByRole('button', { name: '취소', exact: true }).click();
   expect(requests).toHaveLength(0);
   await dialog.getByRole('button', { name: '기록 삭제', exact: true }).click();
