@@ -258,7 +258,6 @@ test('상세 수정은 새 날짜로 돌아가고 중첩 팝업을 만들지 않
 });
 
 test('뒤로가기 취소는 초안을 유지하고 제출 중에는 팝업을 유지한다', async ({ page }) => {
-  page.on('console', (message) => console.log('calendar history diagnostic:', message.text()));
   const { state } = await setup(page);
   const form = await newForm(page);
   await form

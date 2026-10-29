@@ -43,9 +43,12 @@ export function CalendarWorkspace(props: Props) {
   );
 }
 function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
-  const search = useSearchParams();
+  const initialSearch = useSearchParams();
+  // Commit traversals only after the active form has accepted navigation.
+  // Router search updates must not unmount a draft before its guard runs.
+  const [search, setSearch] = useState(() => initialSearch.toString());
   const [today, setToday] = useState(seoulDateKey);
-  const route = calendarRoute(search.toString(), today);
+  const route = calendarRoute(search, today);
   const guard = useRef<NavigationGuard | null>(null);
   const openedHere = useRef(false);
   const bypassPop = useRef(false);
@@ -79,18 +82,16 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
   }, [route.canonical, route.invalidPopup]);
   useEffect(() => {
     const protect = (event: PopStateEvent) => {
-      console.info(
-        'calendar traversal guard',
-        bypassPop.current,
-        !!guard.current,
-        guard.current?.protected(),
-      );
       if (bypassPop.current) {
         bypassPop.current = false;
+        setSearch(location.search);
         return;
       }
       const active = guard.current;
-      if (!active?.protected()) return;
+      if (!active?.protected()) {
+        setSearch(location.search);
+        return;
+      }
       event.stopImmediatePropagation();
       history.pushState(null, '', currentUrl.current);
       void active.close(() => {
@@ -140,6 +141,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
     const url = `/calendar?${params}`;
     if (push) history.pushState(null, '', url);
     else history.replaceState(null, '', url);
+    setSearch(params.toString());
     currentUrl.current = url;
   }
   function openDate(date: string) {
