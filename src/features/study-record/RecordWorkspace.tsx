@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useImperativeHandle, useState, type Ref } from 'react';
 import {
   QueryClient,
   QueryClientProvider,
   useInfiniteQuery,
   useQueryClient,
 } from '@tanstack/react-query';
+import type { AddRecordHandle } from '../calendar/navigation';
 import { Button } from '@/components/ui/Button';
 import { PeriodPicker } from '@/components/ui/PeriodPicker';
 import { seoulDateKey } from '@/lib/seoul-date';
@@ -18,7 +19,11 @@ import { recordsRequest } from './client';
 import type { StudyRecord } from './types';
 import styles from './RecordWorkspace.module.css';
 
-export function RecordWorkspace(props: { userId: string; groupId: string }) {
+export function RecordWorkspace(props: {
+  userId: string;
+  groupId: string;
+  ref?: Ref<AddRecordHandle>;
+}) {
   const [client] = useState(() => new QueryClient());
   useEffect(() => () => client.clear(), [client]);
   return (
@@ -27,12 +32,21 @@ export function RecordWorkspace(props: { userId: string; groupId: string }) {
     </QueryClientProvider>
   );
 }
-function Records({ userId, groupId }: { userId: string; groupId: string }) {
+function Records({
+  userId,
+  groupId,
+  ref,
+}: {
+  userId: string;
+  groupId: string;
+  ref?: Ref<AddRecordHandle>;
+}) {
   const [today, setToday] = useState(seoulDateKey);
   const [month, setMonth] = useState(() => seoulDateKey().slice(0, 7));
   const [panel, setPanel] = useState<
     { kind: 'new' } | { kind: 'edit' | 'delete'; record: StudyRecord } | null
   >(null);
+  useImperativeHandle(ref, () => ({ addToday: () => setPanel({ kind: 'new' }) }));
   const [savedNotice, setSavedNotice] = useState<{ id: number; message: string }>({
     id: 0,
     message: '',

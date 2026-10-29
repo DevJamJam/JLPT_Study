@@ -28,6 +28,17 @@ export function StudyDialog({ title, children, onClose }: Props) {
       ref={ref}
       className={styles.dialog}
       aria-labelledby={titleId}
+      onClick={(event) => {
+        if (event.target !== event.currentTarget) return;
+        const rect = event.currentTarget.getBoundingClientRect();
+        if (
+          event.clientX < rect.left ||
+          event.clientX > rect.right ||
+          event.clientY < rect.top ||
+          event.clientY > rect.bottom
+        )
+          onClose();
+      }}
       onCancel={(event) => {
         event.preventDefault();
         onClose();

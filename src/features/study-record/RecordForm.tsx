@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useImperativeHandle, useRef, useState, type Ref, type FormEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { StudyDialog } from '@/components/ui/StudyDialog';
 import { Button } from '@/components/ui/Button';
@@ -15,10 +15,13 @@ import {
   readOwnRecord,
   ownedRecord,
 } from './client';
+import type { NavigationGuard } from '../calendar/navigation';
 import type { StudyRecord } from './types';
 import styles from './RecordWorkspace.module.css';
 
 type Props = {
+  navigationRef?: Ref<NavigationGuard>;
+  initialDate?: string;
   record?: StudyRecord;
   today: string;
   userId: string;
@@ -29,6 +32,8 @@ type Props = {
 
 export function RecordForm({
   record: initialRecord,
+  initialDate,
+  navigationRef,
   today,
   userId,
   groupId,
@@ -71,7 +76,11 @@ export function RecordForm({
     networkMode: 'always',
   });
   const options = categories.data?.categories ?? [];
-  async function close() {
+  useImperativeHandle(navigationRef, () => ({
+    close,
+    protected: () => dirty.current || inFlight.current || closing.current,
+  }));
+  async function close(next?: () => void) {
     if (inFlight.current || closing.current) return;
     closing.current = true;
     try {
@@ -84,7 +93,8 @@ export function RecordForm({
         ))
       )
         return;
-      onClose();
+      if (next) next();
+      else onClose();
     } finally {
       closing.current = false;
     }
@@ -286,7 +296,7 @@ export function RecordForm({
               type="date"
               min="2000-01-01"
               max={today}
-              defaultValue={record?.studyDate ?? today}
+              defaultValue={record?.studyDate ?? initialDate ?? today}
               required
               {...invalid('studyDate')}
             />
@@ -382,6 +392,7 @@ export function RecordForm({
             />
             {fieldError('memo')}
           </label>
+          <p className={styles.help}>스터디원에게 공개됩니다.</p>
         </fieldset>
         {error && (
           <p role="alert" className={styles.error}>

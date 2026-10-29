@@ -12,6 +12,8 @@ type Props = {
   onSettings: () => void;
   onNavigate: (view: MainView) => void;
   onAdd: () => void;
+  addLabel?: string;
+  disabledViews?: MainView[];
 };
 const links = [
   { view: 'home', label: '홈', Icon: FiHome },
@@ -30,6 +32,8 @@ export function StudyShell({
   onSettings,
   onNavigate,
   onAdd,
+  addLabel = '공부 기록 남기기',
+  disabledViews = [],
 }: Props) {
   return (
     <div className={`${styles.shell} ${styles[theme]}`} data-testid="study-shell">
@@ -57,7 +61,8 @@ export function StudyShell({
               type="button"
               className={`${styles.navButton} ${view === 'add' ? styles.add : ''}`}
               aria-current={view === active ? 'page' : undefined}
-              aria-label={view === 'add' ? '공부 기록 남기기' : label}
+              aria-label={view === 'add' ? addLabel : label}
+              disabled={view !== 'add' && disabledViews.includes(view)}
               onClick={() => (view === 'add' ? onAdd() : onNavigate(view))}
             >
               <span className={styles.icon}>
