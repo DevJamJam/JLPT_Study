@@ -1,17 +1,25 @@
 'use client';
 
-import { useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { StudyDialog } from '@/components/ui/StudyDialog';
 import { Button } from '@/components/ui/Button';
 import { confirmDiscard } from '@/lib/notifications';
-import { AuthClientError, jsonRequest } from '../auth/client';
+import { AuthClientError } from '../auth/client';
 import { validateRecordInput, type RecordInput } from './validation';
-import { categoriesRequest, recordError, saveRecordRequest } from './client';
+import {
+  categoriesRequest,
+  recordError,
+  saveRecordRequest,
+  updateRecordRequest,
+  readOwnRecord,
+  ownedRecord,
+} from './client';
 import type { StudyRecord } from './types';
 import styles from './RecordWorkspace.module.css';
 
 type Props = {
+  record?: StudyRecord;
   today: string;
   userId: string;
   groupId: string;
@@ -19,7 +27,18 @@ type Props = {
   onSaved: (record: StudyRecord) => void;
 };
 
-export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) {
+export function RecordForm({
+  record: initialRecord,
+  today,
+  userId,
+  groupId,
+  onClose,
+  onSaved,
+}: Props) {
+  const [record, setRecord] = useState(initialRecord);
+  const [revision, setRevision] = useState(0);
+  const [conflict, setConflict] = useState(false);
+  const [latest, setLatest] = useState<StudyRecord | null>(null);
   const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [uncertain, setUncertain] = useState(false);
@@ -30,6 +49,13 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
   const inFlight = useRef(false);
   const closing = useRef(false);
   const attempt = useRef<(RecordInput & { id: string }) | null>(null);
+  useEffect(() => {
+    function warn(event: BeforeUnloadEvent) {
+      if (dirty.current) event.preventDefault();
+    }
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, []);
   const categories = useQuery({
     queryKey: ['categories', userId, groupId],
     queryFn: ({ signal }) => categoriesRequest(signal),
@@ -38,7 +64,9 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
   });
   const mutation = useMutation({
     mutationFn: (input: RecordInput & { id: string }) =>
-      saveRecordRequest({ ...input, expectedUserId: userId }),
+      record
+        ? updateRecordRequest(record, input, userId, groupId)
+        : saveRecordRequest({ ...input, expectedUserId: userId }),
     retry: false,
     networkMode: 'always',
   });
@@ -62,7 +90,7 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
     }
   }
   async function run(input: RecordInput & { id: string }) {
-    if (inFlight.current || terminal) return;
+    if (inFlight.current || terminal || conflict) return;
     inFlight.current = true;
     setBusy(true);
     setError('');
@@ -71,10 +99,29 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
       onSaved(result.record);
     } catch (error) {
       const unknown = !(error instanceof AuthClientError) || error.status >= 500;
-      setUncertain(unknown || uncertain);
+      if (record && error instanceof AuthClientError && error.code === 'CONFLICT') {
+        setConflict(true);
+        setUncertain(false);
+        try {
+          setLatest(ownedRecord(error.currentRecord, record.id, userId, groupId));
+        } catch {
+          setLatest(null);
+        }
+      }
+      setUncertain(
+        error instanceof AuthClientError && error.code === 'CONFLICT'
+          ? false
+          : unknown || uncertain,
+      );
       setTerminal(
         error instanceof AuthClientError &&
-          ['IDEMPOTENCY_CONFLICT', 'RECORD_DELETED', 'ACCOUNT_CHANGED'].includes(error.code),
+          [
+            'IDEMPOTENCY_CONFLICT',
+            'RECORD_DELETED',
+            'ACCOUNT_CHANGED',
+            'NOT_FOUND',
+            'FORBIDDEN',
+          ].includes(error.code),
       );
       setExpired(
         error instanceof AuthClientError &&
@@ -94,7 +141,7 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
   }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || terminal) return;
+    if (inFlight.current || terminal || conflict) return;
     if (uncertain && attempt.current) {
       void run(attempt.current);
       return;
@@ -122,7 +169,10 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
     const previous = attempt.current;
     const same =
       previous && JSON.stringify({ ...previous, id: undefined }) === JSON.stringify(value.value);
-    attempt.current = { ...value.value, id: same ? previous.id : crypto.randomUUID() };
+    attempt.current = {
+      ...value.value,
+      id: record?.id ?? (same ? previous.id : crypto.randomUUID()),
+    };
     void run(attempt.current);
   }
   async function checkResult() {
@@ -130,13 +180,59 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
     inFlight.current = true;
     setBusy(true);
     try {
-      const data = await jsonRequest<{ record: StudyRecord }>(`/api/records/${attempt.current.id}`);
-      if (data.record.userId !== userId) throw new Error('Unexpected owner');
-      onSaved(data.record);
-    } catch {
-      setError('저장 결과가 아직 확인되지 않아요. 같은 요청으로 다시 시도해주세요.');
+      const current = await readOwnRecord(attempt.current.id, userId, groupId);
+      if (record) {
+        setLatest(current);
+        setConflict(true);
+        setUncertain(false);
+        setError('현재 저장된 기록을 확인했어요. 내용을 확인한 뒤 최신 기록을 불러와주세요.');
+      } else onSaved(current);
+    } catch (error) {
+      setError(
+        error instanceof AuthClientError
+          ? recordError(error)
+          : '저장 결과가 아직 확인되지 않아요. 같은 요청으로 다시 시도해주세요.',
+      );
+      if (error instanceof AuthClientError) {
+        setExpired(
+          error.status === 401 || ['ACCOUNT_CHANGED', 'PIN_CHANGE_REQUIRED'].includes(error.code),
+        );
+        if (['ACCOUNT_CHANGED', 'FORBIDDEN'].includes(error.code)) setTerminal(true);
+      }
     } finally {
       inFlight.current = false;
+      setBusy(false);
+    }
+  }
+  async function reloadLatest() {
+    if (!record || inFlight.current || closing.current) return;
+    closing.current = true;
+    try {
+      if (dirty.current && !(await confirmDiscard('작성 중인 내용을 버리고 최신 기록을 불러와요.')))
+        return;
+      inFlight.current = true;
+      setBusy(true);
+      const current = await readOwnRecord(record.id, userId, groupId);
+      setRecord(current);
+      setLatest(null);
+      setConflict(false);
+      setUncertain(false);
+      setFieldErrors({});
+      setError('');
+      attempt.current = null;
+      dirty.current = false;
+      setRevision((value) => value + 1);
+    } catch (error) {
+      setError(recordError(error));
+      if (error instanceof AuthClientError) {
+        setExpired(
+          error.status === 401 || ['ACCOUNT_CHANGED', 'PIN_CHANGE_REQUIRED'].includes(error.code),
+        );
+        if (['NOT_FOUND', 'FORBIDDEN', 'ACCOUNT_CHANGED'].includes(error.code)) setTerminal(true);
+      }
+    } finally {
+      inFlight.current = false;
+      closing.current = false;
       setBusy(false);
     }
   }
@@ -154,7 +250,10 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
     };
   }
   return (
-    <StudyDialog title="공부 기록 남기기" onClose={() => void close()}>
+    <StudyDialog
+      title={record ? '공부 기록 수정' : '공부 기록 남기기'}
+      onClose={() => void close()}
+    >
       <p className={styles.help}>공부한 날짜와 종류, 시간을 남겨주세요.</p>
       {categories.isPending && <p role="status">공부 종류를 불러오고 있어요…</p>}
       {categories.isError && (
@@ -171,6 +270,7 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
         <p role="status">등록된 공부 종류가 없어요. 관리자에게 문의해주세요.</p>
       )}
       <form
+        key={revision}
         onSubmit={submit}
         onChange={() => {
           dirty.current = true;
@@ -186,7 +286,7 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
               type="date"
               min="2000-01-01"
               max={today}
-              defaultValue={today}
+              defaultValue={record?.studyDate ?? today}
               required
               {...invalid('studyDate')}
             />
@@ -194,10 +294,18 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
           </label>
           <label className={styles.field}>
             공부 종류
-            <select name="categoryId" defaultValue="" required {...invalid('categoryId')}>
+            <select
+              name="categoryId"
+              defaultValue={record?.categoryId ?? ''}
+              required
+              {...invalid('categoryId')}
+            >
               <option value="" disabled>
                 종류를 선택해주세요
               </option>
+              {record && !options.some((option) => option.id === record.categoryId) && (
+                <option value={record.categoryId}>{record.categoryName}</option>
+              )}
               {options.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -210,6 +318,7 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
             <label className={styles.field}>
               공부 시간 (분)
               <input
+                defaultValue={record?.minutes}
                 name="minutes"
                 type="number"
                 min="1"
@@ -223,7 +332,12 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
             </label>
             <label className={styles.field}>
               시작 시각 (선택)
-              <input name="startTime" type="time" {...invalid('startTime')} />
+              <input
+                defaultValue={record?.startTime ?? ''}
+                name="startTime"
+                type="time"
+                {...invalid('startTime')}
+              />
               {fieldError('startTime')}
             </label>
           </div>
@@ -231,6 +345,7 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
             <label className={styles.field}>
               공부량 (선택)
               <input
+                defaultValue={record?.quantity ?? ''}
                 name="quantity"
                 type="number"
                 min="1"
@@ -243,7 +358,11 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
             </label>
             <label className={styles.field}>
               단위
-              <select name="quantityUnit" defaultValue="" {...invalid('quantityUnit')}>
+              <select
+                name="quantityUnit"
+                defaultValue={record?.quantityUnit ?? ''}
+                {...invalid('quantityUnit')}
+              >
                 <option value="">선택 안 함</option>
                 <option value="item">개</option>
                 <option value="page">쪽</option>
@@ -254,7 +373,13 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
           </div>
           <label className={styles.field}>
             메모 (선택)
-            <textarea name="memo" rows={4} maxLength={1000} {...invalid('memo')} />
+            <textarea
+              defaultValue={record?.memo ?? ''}
+              name="memo"
+              rows={4}
+              maxLength={1000}
+              {...invalid('memo')}
+            />
             {fieldError('memo')}
           </label>
         </fieldset>
@@ -262,6 +387,20 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
           <p role="alert" className={styles.error}>
             {error}
           </p>
+        )}
+        {conflict && (
+          <div className={styles.conflict}>
+            <p>작성 중인 내용은 그대로 남아 있어요. 최신 기록을 확인한 뒤 다시 수정해주세요.</p>
+            {latest && (
+              <p>
+                현재 기록: {latest.studyDate} · {latest.categoryName} · {latest.minutes}분
+                {latest.memo ? ` · ${latest.memo}` : ''}
+              </p>
+            )}
+            <Button variant="secondary" disabled={busy} onClick={() => void reloadLatest()}>
+              최신 기록 불러오기
+            </Button>
+          </div>
         )}
         {expired && (
           <a className={styles.link} href="/login" target="_blank" rel="noopener noreferrer">
@@ -274,12 +413,19 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
           disabled={
             busy ||
             terminal ||
+            conflict ||
             !options.length ||
             categories.isPending ||
             (categories.isError && !uncertain)
           }
         >
-          {busy ? '저장 확인 중…' : uncertain ? '같은 요청으로 다시 시도' : '기록 저장'}
+          {busy
+            ? '저장 확인 중…'
+            : uncertain
+              ? '같은 요청으로 다시 시도'
+              : record
+                ? '수정 저장'
+                : '기록 저장'}
         </Button>
         {uncertain && (
           <Button
@@ -291,6 +437,14 @@ export function RecordForm({ today, userId, groupId, onClose, onSaved }: Props) 
             저장 결과 확인
           </Button>
         )}
+        <Button
+          variant="quiet"
+          className={styles.fullWidth}
+          disabled={busy}
+          onClick={() => void close()}
+        >
+          취소
+        </Button>
       </form>
     </StudyDialog>
   );

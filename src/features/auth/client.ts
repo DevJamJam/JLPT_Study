@@ -5,6 +5,7 @@ export class AuthClientError extends Error {
     public readonly status: number,
     public readonly code: string,
     public readonly retryAt?: string,
+    public readonly currentRecord?: unknown,
   ) {
     super(code);
   }
@@ -36,7 +37,7 @@ export async function jsonRequest<Data>(
   path: string,
   body?: unknown,
   signal?: AbortSignal,
-  method?: 'PATCH',
+  method?: 'PATCH' | 'DELETE',
 ) {
   const response = await fetch(path, {
     method: method ?? (body === undefined ? 'GET' : 'POST'),
@@ -52,6 +53,7 @@ export async function jsonRequest<Data>(
       response.status,
       typeof json.error?.code === 'string' ? json.error.code : 'AUTH_UNAVAILABLE',
       json.error?.retryAt,
+      json.error?.currentRecord,
     );
   return json.data as Data;
 }
