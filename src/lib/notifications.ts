@@ -18,7 +18,7 @@ export async function confirmDiscard(message = '입력한 내용은 저장되지
 
 export function confirmRecordDelete(description: string) {
   return confirmAction(
-    '공부 기록을 삭제할까요?',
+    '기록을 삭제할까요?',
     `${description}\n삭제한 기록은 복구할 수 없어요.`,
     '삭제',
     '취소',

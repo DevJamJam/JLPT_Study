@@ -388,6 +388,15 @@ test('삭제 취소·실패 재시도·중복 차단·마지막 기록 빈 상�
         ),
     )
     .toBe(true);
+  const heading = page.getByRole('heading', { name: '기록을 삭제할까요?', exact: true });
+  expect(
+    await heading.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return range.getClientRects().length;
+    }),
+  ).toBe(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({
     path: `test-results/${info.project.name}-record-delete-confirm.png`,
     animations: 'disabled',
