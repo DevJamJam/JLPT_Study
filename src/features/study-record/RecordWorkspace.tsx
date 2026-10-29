@@ -12,6 +12,7 @@ import { PeriodPicker } from '@/components/ui/PeriodPicker';
 import { seoulDateKey } from '@/lib/seoul-date';
 import { toast } from '@/lib/notifications';
 import { AuthClientError } from '../auth/client';
+import { RecordDelete } from './RecordDelete';
 import { RecordForm } from './RecordForm';
 import { recordsRequest } from './client';
 import type { StudyRecord } from './types';
@@ -29,10 +30,15 @@ export function RecordWorkspace(props: { userId: string; groupId: string }) {
 function Records({ userId, groupId }: { userId: string; groupId: string }) {
   const [today, setToday] = useState(seoulDateKey);
   const [month, setMonth] = useState(() => seoulDateKey().slice(0, 7));
-  const [open, setOpen] = useState(false);
-  const [savedNotice, setSavedNotice] = useState(0);
+  const [panel, setPanel] = useState<
+    { kind: 'new' } | { kind: 'edit' | 'delete'; record: StudyRecord } | null
+  >(null);
+  const [savedNotice, setSavedNotice] = useState<{ id: number; message: string }>({
+    id: 0,
+    message: '',
+  });
   useEffect(() => {
-    if (savedNotice) void toast('공부 기록을 저장했어요.');
+    if (savedNotice.id) void toast(savedNotice.message);
   }, [savedNotice]);
   const client = useQueryClient();
   useEffect(() => {
@@ -75,17 +81,24 @@ function Records({ userId, groupId }: { userId: string; groupId: string }) {
   }
   function saved(record: StudyRecord) {
     setMonth(record.studyDate.slice(0, 7));
-    setOpen(false);
+    setPanel(null);
     void client
       .cancelQueries({ queryKey: ['records', userId, groupId] })
       .then(() => client.invalidateQueries({ queryKey: ['records', userId, groupId] }));
-    setSavedNotice((value) => value + 1);
+    setSavedNotice((value) => ({ id: value.id + 1, message: '공부 기록을 저장했어요.' }));
+  }
+  function deleted() {
+    setPanel(null);
+    void client
+      .cancelQueries({ queryKey: ['records', userId, groupId] })
+      .then(() => client.invalidateQueries({ queryKey: ['records', userId, groupId] }));
+    setSavedNotice((value) => ({ id: value.id + 1, message: '공부 기록을 삭제했어요.' }));
   }
   return (
     <section className={styles.workspace} aria-labelledby="records-title">
       <div className={styles.heading}>
         <h2 id="records-title">내 기록</h2>
-        <Button onClick={() => setOpen(true)}>공부 기록 남기기</Button>
+        <Button onClick={() => setPanel({ kind: 'new' })}>공부 기록 남기기</Button>
       </div>
       <p className={styles.help}>하루하루 쌓아가는 나의 공부 기록</p>
       <PeriodPicker
@@ -148,6 +161,16 @@ function Records({ userId, groupId }: { userId: string; groupId: string }) {
                 </p>
               )}
               {record.memo && <p>{record.memo}</p>}
+              {record.userId === userId && (
+                <div className={styles.recordActions}>
+                  <Button variant="quiet" onClick={() => setPanel({ kind: 'edit', record })}>
+                    수정
+                  </Button>
+                  <Button variant="quiet" onClick={() => setPanel({ kind: 'delete', record })}>
+                    삭제
+                  </Button>
+                </div>
+              )}
             </article>
           ))}
           {query.hasNextPage && (
@@ -162,13 +185,24 @@ function Records({ userId, groupId }: { userId: string; groupId: string }) {
           )}
         </div>
       )}
-      {open && (
+      {panel && panel.kind !== 'delete' && (
         <RecordForm
+          key={panel.kind === 'edit' ? panel.record.id : 'new'}
+          record={panel.kind === 'edit' ? panel.record : undefined}
           today={today}
           userId={userId}
           groupId={groupId}
-          onClose={() => setOpen(false)}
+          onClose={() => setPanel(null)}
           onSaved={saved}
+        />
+      )}
+      {panel?.kind === 'delete' && (
+        <RecordDelete
+          record={panel.record}
+          userId={userId}
+          groupId={groupId}
+          onClose={() => setPanel(null)}
+          onDeleted={deleted}
         />
       )}
     </section>
