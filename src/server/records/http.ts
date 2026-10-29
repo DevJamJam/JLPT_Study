@@ -17,7 +17,11 @@ export function createRecordsHttp(
   env: Record<string, string | undefined>,
   transport: typeof fetch = fetch,
 ) {
-  async function handle(action: 'create' | 'get' | 'list', request: NextRequest, id?: string) {
+  async function handle(
+    action: 'create' | 'get' | 'list' | 'categories',
+    request: NextRequest,
+    id?: string,
+  ) {
     const production = env.NODE_ENV === 'production';
     const started = performance.now();
     let dbTime = 0;
@@ -39,6 +43,8 @@ export function createRecordsHttp(
           });
         const session = await db.resolveSession(hash);
         if (session.profile.mustChangePin) throw new RecordRequestError(403, 'PIN_CHANGE_REQUIRED');
+        if (action === 'categories')
+          return json({ data: { categories: await db.listCategories() } });
         if (action === 'get') {
           if (!isUuid(id)) throw new RecordRequestError(400, 'VALIDATION_ERROR');
           return json({ data: { record: await db.getRecord(id.toLowerCase(), session.group.id) } });
@@ -79,5 +85,6 @@ export function createRecordsHttp(
     create: (request: NextRequest) => handle('create', request),
     get: (request: NextRequest, id: string) => handle('get', request, id),
     list: (request: NextRequest) => handle('list', request),
+    categories: (request: NextRequest) => handle('categories', request),
   };
 }

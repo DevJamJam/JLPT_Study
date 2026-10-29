@@ -57,7 +57,11 @@ export async function createRecord<T>(
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     throw new RecordRequestError(400, 'VALIDATION_ERROR');
   }
-  const id = (body as Record<string, unknown>).id;
+  const requested = body as Record<string, unknown>;
+  if (requested.expectedUserId !== undefined && requested.expectedUserId !== session.profile.id) {
+    throw new RecordRequestError(409, 'ACCOUNT_CHANGED');
+  }
+  const id = requested.id;
   const result = validateRecordInput(body, now);
   if (typeof id !== 'string' || !uuid.test(id) || !result.ok) {
     throw new RecordRequestError(400, 'VALIDATION_ERROR', result.ok ? undefined : result.errors);

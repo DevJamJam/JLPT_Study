@@ -61,6 +61,7 @@ export function recordFromRow(row: unknown, groupId: string, actorId?: string): 
 
 export type RecordDatabase = CreateRecordDatabase<StudyRecord> & {
   getRecord(id: string, groupId: string): Promise<StudyRecord>;
+  listCategories(): Promise<{ id: string; name: string }[]>;
   listRecords(query: RecordQuery, actorId: string, groupId: string): Promise<RecordPage>;
 };
 
@@ -89,6 +90,35 @@ export function createRecordDatabase(
   return {
     resolveSession: auth.resolveSession,
     getRecord,
+    async listCategories() {
+      const result: { id: string; name: string }[] = [];
+      const seen = new Set<string>();
+      for (let offset = 0; ;) {
+        const rows = await request(
+          `study_categories?select=id,name&order=sort_order.asc&limit=100&offset=${offset}`,
+        );
+        if (
+          !Array.isArray(rows) ||
+          rows.length > 100 ||
+          rows.some(
+            (row) =>
+              !object(row) ||
+              !isUuid(row.id) ||
+              typeof row.name !== 'string' ||
+              !row.name.trim() ||
+              [...row.name].length > 20,
+          )
+        )
+          throw unavailable();
+        for (const row of rows) {
+          if (seen.has(row.id as string)) throw unavailable();
+          seen.add(row.id as string);
+          result.push({ id: row.id as string, name: row.name as string });
+        }
+        if (!rows.length) return result;
+        offset += rows.length;
+      }
+    },
     async saveRecord(input) {
       const record = input.record;
       const result = await request('rpc/save_record', {

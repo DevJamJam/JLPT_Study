@@ -12,14 +12,14 @@ export function toast(message: string) {
   });
 }
 
-export async function confirmDiscard() {
+export async function confirmDiscard(message = '입력한 내용은 저장되지 않아요.') {
   const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
   const previous = document.activeElement as HTMLElement | null;
   dialog?.close();
   try {
     const result = await Swal.fire({
       titleText: '작성한 내용을 버릴까요?',
-      text: '입력한 내용은 저장되지 않아요.',
+      text: message,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: '버리기',

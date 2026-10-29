@@ -166,7 +166,7 @@ npm run dev
 
 브라우저에서 http://localhost:3000/preview 를 엽니다. 디자인 검토용 가상 데이터이며 입력 내용을 실제로 저장하지 않습니다. `npm run check`는 포맷·린트·타입 검사, `npm run build`는 운영 빌드, `npm run format`은 소스 포맷 정리입니다. 기존 docs 문서는 포맷 자동 변경에서 제외합니다.
 
-기록 검증 단위 검사: `npm run test:unit`. Playwright 러너의 순수 코어·HTTP 검사와 Node 관리자 초기화 검사 총 81개를 브라우저 없이 실행합니다. 기록 생성·조회 API에 검증 함수를 연결했습니다. 기록 수정·삭제 API와 화면 연결은 후속입니다.
+기록 검증 단위 검사: `npm run test:unit`. Playwright 러너의 순수 코어·HTTP 검사와 Node 관리자 초기화 검사 총 83개를 브라우저 없이 실행합니다. 기록 생성·조회 API에 검증 함수를 연결했습니다. 기록 수정·삭제 API와 화면 연결은 후속입니다.
 
 브라우저 검사: `npx playwright install chromium` 후 `npm run test:e2e`. 검사 명령은 운영 빌드 서버를 자동으로 시작합니다. SE3·패드·PC는 Chromium 화면 크기 검사이며 실제 Safari 기기 검사가 아닙니다.
 
@@ -224,3 +224,7 @@ Vercel Functions는 `vercel.json`의 `hnd1`(도쿄)에서 실행하도록 설정
 `POST /api/records`는 정상 일반 사용자 세션에서 본인 기록을 저장합니다. `GET /api/records/:id`는 같은 그룹의 기록만 조회합니다. 목록은 `scope=mine|group&from=YYYY-MM-DD&to=YYYY-MM-DD`(최대42일) 또는 `scope=mine&month=YYYY-MM&limit=30&cursor=...`로 조회합니다. 두 형식을 혼용할 수 없습니다. 생성 시 같은 ID·입력을 유지해 재시도합니다. 기록 수정·삭제와 화면 연결은 아직 후속입니다.
 
 CI의 database 작업은 기존 SQL 계약 검사 후 격리된 PostgREST14.18을 실행하고 `npx playwright test --config playwright.integration.config.ts`로 실제 HTTP/DB 통합4개를 검사합니다. 이 검사는 localhost의 전용 `jlpt_test` DB와 테스트 PostgREST URL을 모두 요구하며 운영 DB에서 실행할 수 없습니다. 자세한 계약과 검증 한계는 [결정 기록022](docs/decisions/022-record-api.md)에 남깁니다.
+
+### 기록 입력·월별 내 기록 화면
+
+로그인 후 프로필 아래의 내 기록에서 월을 이동하거나 기록을 더 읽을 수 있습니다. 공부 기록 남기기는 기존 팝업을 사용하고 `/api/categories`의 최신 종류를 불러옵니다. 입력 검증·중복 제출 차단·실패 후 입력 유지와 같은 ID 재시도를 처리합니다. 저장 성공 후 해당 월의 목록을 새로 조회합니다. 기록용 TanStack Query 캐시는 메모리에서만 사용합니다. 결정 기록은 [023](docs/decisions/023-record-ui.md)을 참고합니다.

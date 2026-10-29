@@ -31,6 +31,7 @@ const messages: Record<string, string> = {
   AUTH_NOT_CONFIGURED: '인증 설정을 확인 중이에요.',
   AUTH_UNAVAILABLE: '인증 서비스를 잠시 이용할 수 없어요.',
   FORBIDDEN: '허용되지 않은 요청이에요.',
+  ACCOUNT_CHANGED: '로그인 계정이 변경되었어요. 계정을 확인해주세요.',
   NOT_FOUND: '기록을 찾을 수 없어요.',
   CONFLICT: '기록이 변경되었어요. 다시 확인해주세요.',
   RECORD_DELETED: '이미 삭제된 기록이에요.',
