@@ -22,6 +22,7 @@ import {
   periodRecordsRequest,
 } from './client';
 import type { NavigationGuard, AddRecordHandle } from './navigation';
+import { usePopupHistory } from '../study-record/usePopupHistory';
 import styles from '@/styles/notebook.module.css';
 import extra from './CalendarWorkspace.module.css';
 
@@ -45,14 +46,11 @@ export function CalendarWorkspace(props: Props) {
 function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
   const initialSearch = useSearchParams();
   // Commit traversals only after the active form has accepted navigation.
-  // Router search updates must not unmount a draft before its guard runs.
+  // Router search updates must not unmount a draft before its guardRef runs.
   const [search, setSearch] = useState(() => initialSearch.toString());
   const [today, setToday] = useState(seoulDateKey);
   const route = calendarRoute(search, today);
-  const guard = useRef<NavigationGuard | null>(null);
-  const openedHere = useRef(false);
-  const bypassPop = useRef(false);
-  const currentUrl = useRef('');
+  const { guardRef, openedHereRef, bypassPopRef, currentUrlRef } = usePopupHistory(setSearch);
   const lastNotice = useRef(0);
   const [notice, setNotice] = useState({ id: 0, message: '' });
   const client = useQueryClient();
@@ -78,30 +76,8 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
       history.replaceState(null, '', canonical);
       if (route.invalidPopup) void toast('날짜나 기록 주소를 확인해주세요. 달력으로 돌아왔어요.');
     }
-    currentUrl.current = canonical;
-  }, [route.canonical, route.invalidPopup]);
-  useEffect(() => {
-    const protect = (event: PopStateEvent) => {
-      if (bypassPop.current) {
-        bypassPop.current = false;
-        setSearch(location.search);
-        return;
-      }
-      const active = guard.current;
-      if (!active?.protected()) {
-        setSearch(location.search);
-        return;
-      }
-      event.stopImmediatePropagation();
-      history.pushState(null, '', currentUrl.current);
-      void active.close(() => {
-        bypassPop.current = true;
-        history.back();
-      });
-    };
-    window.addEventListener('popstate', protect, true);
-    return () => window.removeEventListener('popstate', protect, true);
-  }, []);
+    currentUrlRef.current = canonical;
+  }, [route.canonical, route.invalidPopup, currentUrlRef]);
   useEffect(() => {
     if (notice.id > lastNotice.current && !route.panel) {
       lastNotice.current = notice.id;
@@ -142,21 +118,21 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
     if (push) history.pushState(null, '', url);
     else history.replaceState(null, '', url);
     setSearch(params.toString());
-    currentUrl.current = url;
+    currentUrlRef.current = url;
   }
   function openDate(date: string) {
-    openedHere.current = true;
+    openedHereRef.current = true;
     update({ date, scope, panel: null, recordId: null, direct: null }, true);
   }
   function closePopup() {
-    if (openedHere.current) {
-      openedHere.current = false;
-      bypassPop.current = true;
+    if (openedHereRef.current) {
+      openedHereRef.current = false;
+      bypassPopRef.current = true;
       history.back();
     } else update({ date: null, scope: null, panel: null, recordId: null, direct: null });
   }
   function addToday() {
-    openedHere.current = true;
+    openedHereRef.current = true;
     update({ date: today, scope: 'mine', panel: 'new', direct: '1', recordId: null }, true);
   }
   useImperativeHandle(ref, () => ({ addToday }));
@@ -372,7 +348,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
                       onClick={() =>
                         records.length
                           ? openDate(date)
-                          : ((openedHere.current = true),
+                          : ((openedHereRef.current = true),
                             update({ date, scope: 'mine', panel: 'new', direct: null }, true))
                       }
                     >
@@ -473,7 +449,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
           today={today}
           userId={userId}
           groupId={groupId}
-          navigationRef={guard}
+          navigationRef={guardRef}
           onClose={returnDetail}
           onSaved={saved}
         />
@@ -486,7 +462,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
           today={today}
           userId={userId}
           groupId={groupId}
-          navigationRef={guard}
+          navigationRef={guardRef}
           onClose={returnDetail}
           onSaved={saved}
           onDeleted={deleted}

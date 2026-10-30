@@ -2,6 +2,78 @@ import { test, expect } from '@playwright/test';
 import { NextRequest } from 'next/server';
 import { calendarDays } from '../../src/server/calendar/aggregate';
 import { createRecordsHttp } from '../../src/server/records/http';
+import { weeklyStudy } from '../../src/server/study/aggregate';
+import { parseStudyWeek } from '../../src/server/study/query';
+
+test('주간 집계는 연말7일·여러 기록의 공부일 중복 제거·가입순·0일 멤버를 보존한다', () => {
+  const people = Array.from({ length: 15 }, (_, n) => ({ ...members[0], id: id(500 + n) }));
+  const result = weeklyStudy(
+    '2025-12-29',
+    [
+      { id: id(1), userId: people[1].id, studyDate: '2025-12-31', minutes: 30 },
+      { id: id(2), userId: people[1].id, studyDate: '2025-12-31', minutes: 50 },
+      { id: id(3), userId: people[1].id, studyDate: '2026-01-01', minutes: 10 },
+    ],
+    people,
+  );
+  expect(result.totalMinutes).toBe(90);
+  expect(result.activeMembers).toBe(1);
+  expect(result.members.map((member) => member.id)).toEqual(people.map((member) => member.id));
+  expect(result.members[0].studyDays).toBe(0);
+  expect(result.members[1].studyDays).toBe(2);
+  expect(result.members[1].days).toHaveLength(7);
+  expect(result.members[1].days[2]).toEqual({ date: '2025-12-31', minutes: 80 });
+  expect(result.members[1].days[6].date).toBe('2026-01-04');
+});
+
+test('주간 조건은 실제 월요일·중복/알 수 없는 조건·미래 주를 검증한다', () => {
+  expect(parseStudyWeek(new URLSearchParams('week=1999-12-27'), '2026-10-30')).toBe('1999-12-27');
+  for (const value of [
+    '',
+    'week=2026-02-30',
+    'week=2026-10-27',
+    'week=2099-01-05',
+    'week=2026-10-26&week=2026-10-26',
+    'week=2026-10-26&scope=group',
+  ]) {
+    expect(() => parseStudyWeek(new URLSearchParams(value), '2026-10-30')).toThrow();
+  }
+});
+
+test('주간 API는 DB의 작은 반환 상한에도 전부 합산하며 공개 DTO만 반환한다', async () => {
+  const { http, calls } = fixture({ cap: 2 });
+  const response = await http.study(req('?week=2026-09-28'));
+  expect(response.status).toBe(200);
+  expect(response.headers.get('cache-control')).toContain('no-store');
+  const { data } = await response.json();
+  expect(data.totalMinutes).toBe(101);
+  expect(data.activeMembers).toBe(2);
+  expect(data.members[0].studyDays).toBe(1);
+  expect(data.members[0].days).toHaveLength(7);
+  expect(JSON.stringify(data)).not.toContain('PRIVATE');
+  expect(calls.filter((url) => url.searchParams.get('select')?.includes('profile:'))).toHaveLength(
+    2,
+  );
+  expect(
+    calls.find((url) => url.pathname.endsWith('study_records'))?.searchParams.get('select'),
+  ).toBe('id,group_id,user_id,study_date,minutes');
+});
+
+test('주간 API는 잘못된 조건·제한 세션·다른 그룹 응답을 차단한다', async () => {
+  expect((await fixture().http.study(req('?week=2026-10-27'))).status).toBe(400);
+  expect((await fixture().http.study(req('?week=2026-09-28', ''))).status).toBe(401);
+  expect((await fixture({ limited: true }).http.study(req('?week=2026-09-28'))).status).toBe(403);
+  for (const options of [
+    { badMember: true },
+    { badRecord: true },
+    { repeat: true },
+    { fail: true },
+  ]) {
+    const response = await fixture(options).http.study(req('?week=2026-09-28'));
+    expect(response.status).toBe(503);
+    expect(await response.text()).not.toContain('PRIVATE');
+  }
+});
 
 const user = '56000000-0000-4000-8000-000000000001';
 const peer = '56000000-0000-4000-8000-000000000002';

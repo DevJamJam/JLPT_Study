@@ -7,6 +7,7 @@ import { createRecord, RecordRequestError } from './create';
 import { createRecordDatabase } from './database';
 import { mutateRecord } from './mutate';
 import { isUuid, parseRecordQuery } from './query';
+import { parseStudyWeek } from '../study/query';
 
 const messages: Record<string, string> = {
   VALIDATION_ERROR: '공부 기록의 입력과 조회 조건을 확인해주세요.',
@@ -20,7 +21,16 @@ export function createRecordsHttp(
   transport: typeof fetch = fetch,
 ) {
   async function handle(
-    action: 'create' | 'update' | 'delete' | 'get' | 'list' | 'categories' | 'members' | 'calendar',
+    action:
+      | 'create'
+      | 'update'
+      | 'delete'
+      | 'get'
+      | 'list'
+      | 'categories'
+      | 'members'
+      | 'calendar'
+      | 'study',
     request: NextRequest,
     id?: string,
   ) {
@@ -48,6 +58,10 @@ export function createRecordsHttp(
           return json({ data: await mutateRecord(action, id, body, hash, db) });
         const session = await db.resolveSession(hash);
         if (session.profile.mustChangePin) throw new RecordRequestError(403, 'PIN_CHANGE_REQUIRED');
+        if (action === 'study') {
+          const week = parseStudyWeek(request.nextUrl.searchParams);
+          return json({ data: await db.getStudy(week, session.profile.id, session.group.id) });
+        }
         if (action === 'members') {
           if (request.nextUrl.searchParams.size)
             throw new RecordRequestError(400, 'VALIDATION_ERROR');
@@ -106,6 +120,7 @@ export function createRecordsHttp(
     get: (request: NextRequest, id: string) => handle('get', request, id),
     list: (request: NextRequest) => handle('list', request),
     members: (request: NextRequest) => handle('members', request),
+    study: (request: NextRequest) => handle('study', request),
     calendar: (request: NextRequest) => handle('calendar', request),
     categories: (request: NextRequest) => handle('categories', request),
   };

@@ -11,6 +11,7 @@ import type { PublicAuthData } from './types';
 import styles from './Auth.module.css';
 import { StudyShell, type MainView } from '@/components/layout/StudyShell';
 import { CalendarWorkspace } from '../calendar/CalendarWorkspace';
+import { StudyWorkspace } from '../study/StudyWorkspace';
 import type { AddRecordHandle } from '../calendar/navigation';
 import { useSearchParams } from 'next/navigation';
 import { RecordWorkspace } from '../study-record/RecordWorkspace';
@@ -122,6 +123,15 @@ export function SessionHome({ initialView = 'home' }: { initialView?: MainView }
             emoji={session.profile.emoji}
             nickname={session.profile.nickname}
           />
+        ) : initialView === 'study' ? (
+          <StudyWorkspace
+            ref={workspace}
+            key={`${session.profile.id}:${session.group.id}`}
+            userId={session.profile.id}
+            groupId={session.group.id}
+            emoji={session.profile.emoji}
+            nickname={session.profile.nickname}
+          />
         ) : (
           <RecordWorkspace
             ref={workspace}
@@ -169,11 +179,18 @@ export function SessionHome({ initialView = 'home' }: { initialView?: MainView }
         }
         onSettings={() => setSettingsOpen(true)}
         onNavigate={(view) =>
-          router.push(view === 'home' ? '/' : view === 'me' ? '/me' : '/calendar')
+          router.push(
+            view === 'home'
+              ? '/'
+              : view === 'me'
+                ? '/me'
+                : view === 'study'
+                  ? '/study'
+                  : '/calendar',
+          )
         }
         onAdd={() => workspace.current?.addToday()}
         addLabel="새 공부 기록"
-        disabledViews={['study']}
       >
         {body}
       </StudyShell>
