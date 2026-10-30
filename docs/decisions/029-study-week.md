@@ -36,3 +36,8 @@ Issue60. 승인된 스터디 화면을 실제 기록에 연결한다. 홈 요약
 로컬 check·단위101개·빌드를 실행했고 CI/화면 검증 결과는 PR 본문에 진행 상태대로 기록한다.
 캡처는 가상 응답의 실제 Chromium 화면이다. 실제 iPhone Safari·운영 계정의 수동 기록 변경과
 실기기 동기화는 미검증이다.
+
+첫 CI #78에서 format/lint/typecheck·빌드, 단위101개, 브라우저132개, DB통합7개가
+통과했다. https://github.com/DevJamJam/JLPT_Study/actions/runs/41040718523
+로컬 공통 훅의 Ref 반환값은 React 린트가 변경 불가 값으로 해석해 Ref 접미사를 명시했다.
+규칙을 끄지 않았으며 이후 로컬·CI 검사 모두 통과했다. 완료된 상태를 README에 반영한다.
