@@ -13,12 +13,21 @@ export function StudyDialog({ title, children, onClose }: Props) {
     const dialog = ref.current;
     const previous = document.activeElement as HTMLElement | null;
     const scrollPosition = window.scrollY;
+    const scroller = dialog?.closest('main');
+    const mainScrollTop = scroller?.scrollTop ?? 0;
+    const mainScrollLeft = scroller?.scrollLeft ?? 0;
+    const oldMainOverflow = scroller?.style.overflowY ?? '';
     const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+    if (scroller) scroller.style.overflowY = 'hidden';
     dialog?.showModal();
     return () => {
       dialog?.close();
       document.body.style.overflow = oldOverflow;
+      if (scroller) {
+        scroller.style.overflowY = oldMainOverflow;
+        scroller.scrollTo(mainScrollLeft, mainScrollTop);
+      }
       previous?.focus({ preventScroll: true });
       window.scrollTo(0, scrollPosition);
     };

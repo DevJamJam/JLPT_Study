@@ -1,3 +1,4 @@
+import { captureShellScroll, separatedShell } from './layout-assertions';
 import { test, expect, type Page, type Route } from '@playwright/test';
 
 test.use({ actionTimeout: 5000 });
@@ -63,6 +64,32 @@ async function fill(page: Page) {
   return form;
 }
 
+test('내 기록 처음·중간·끝에서 메뉴가 가리지 않고 마지막 수정 버튼을 누를 수 있다', async ({
+  page,
+}, info) => {
+  await setup(page, {
+    records: (route) =>
+      route.fulfill({
+        json: {
+          data: {
+            records: Array.from({ length: 30 }, (_, n) => ({
+              ...base,
+              id: `62000000-0000-4000-8000-${String(n + 100).padStart(12, '0')}`,
+            })),
+            nextCursor: null,
+          },
+        },
+      }),
+  });
+  await expect(page.locator('article')).toHaveCount(30);
+  const main = await captureShellScroll(page, info.project.name, 'records');
+  const edit = page.locator('article').last().getByRole('button', { name: '수정', exact: true });
+  const bottom = (await edit.boundingBox())!.y + (await edit.boundingBox())!.height;
+  const bounds = (await main.boundingBox())!;
+  expect(bottom).toBeLessThanOrEqual(bounds.y + bounds.height);
+  await edit.click({ trial: true });
+});
+
 test('저장 실패 입력 유지·동일ID 재시도·중복 차단·저장/새로고침 반영', async ({ page }, info) => {
   const saved: (typeof base)[] = [];
   const requests: Record<string, unknown>[] = [];
@@ -88,10 +115,11 @@ test('저장 실패 입력 유지·동일ID 재시도·중복 차단·저장/새
   });
   await expect(page.getByText('아직 이달에 남긴 기록이 없어요.')).toBeVisible();
   const form = await fill(page);
+  await separatedShell(page);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({
     path: `test-results/${info.project.name}-record-form.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();
   await expect(form.getByRole('alert')).toContainText('같은 요청으로 다시 시도');
@@ -119,7 +147,7 @@ test('저장 실패 입력 유지·동일ID 재시도·중복 차단·저장/새
   await expect(page.getByText(base.memo, { exact: true })).toBeVisible();
   await page.screenshot({
     path: `test-results/${info.project.name}-record-list.png`,
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -210,7 +238,7 @@ test('세션 만료 입력 유지·재로그인 안내, 시스템 다크 설정�
   await expect(page.getByText(base.memo, { exact: true })).toBeVisible();
   await page.screenshot({
     path: `test-results/${info.project.name}-record-dark.png`,
-    fullPage: true,
+    fullPage: false,
   });
   const form = await fill(page);
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();

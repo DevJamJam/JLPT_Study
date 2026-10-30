@@ -54,24 +54,26 @@ export function StudyShell({
       </header>
       <main className={styles.content}>{children}</main>
       {loggedIn && (
-        <nav className={styles.nav} aria-label="하단 메뉴">
-          {links.map(({ view, label, Icon }) => (
-            <button
-              key={view}
-              type="button"
-              className={`${styles.navButton} ${view === 'add' ? styles.add : ''}`}
-              aria-current={view === active ? 'page' : undefined}
-              aria-label={view === 'add' ? addLabel : label}
-              disabled={view !== 'add' && disabledViews.includes(view)}
-              onClick={() => (view === 'add' ? onAdd() : onNavigate(view))}
-            >
-              <span className={styles.icon}>
-                <Icon aria-hidden="true" />
-              </span>
-              <span>{label}</span>
-            </button>
-          ))}
-        </nav>
+        <footer className={styles.footer}>
+          <nav className={styles.nav} aria-label="하단 메뉴">
+            {links.map(({ view, label, Icon }) => (
+              <button
+                key={view}
+                type="button"
+                className={`${styles.navButton} ${view === 'add' ? styles.add : ''}`}
+                aria-current={view === active ? 'page' : undefined}
+                aria-label={view === 'add' ? addLabel : label}
+                disabled={view !== 'add' && disabledViews.includes(view)}
+                onClick={() => (view === 'add' ? onAdd() : onNavigate(view))}
+              >
+                <span className={styles.icon}>
+                  <Icon aria-hidden="true" />
+                </span>
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+        </footer>
       )}
     </div>
   );
