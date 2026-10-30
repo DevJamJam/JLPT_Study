@@ -63,19 +63,77 @@
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-gutter: stable both-edges;
-  scrollbar-width: thin;
+  scrollbar-width: auto;
+  scrollbar-color: var(--primary-strong) var(--border);
 }
 .month .content,
 .week .content {
   padding-top: 0;
 }
 .footer {
-  /* Reserve space for the raised add button outside the scrolling content. */
-  padding-top: 12px;
+  background: var(--surface);
+}
+.scrollGuide {
+  width: min(100%, 1120px);
+  margin: 0 auto;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--border);
+}
+.scrollGuide button {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  cursor: pointer;
+}
+.scrollGuide button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.scrollGuide svg {
+  width: 20px;
+  height: 20px;
+}
+.scrollStatus {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+.scrollStatus progress {
+  appearance: none;
+  width: min(100%, 200px);
+  height: 5px;
+  border: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--border);
+}
+.scrollStatus progress::-webkit-progress-bar {
+  background: var(--border);
+}
+.scrollStatus progress::-webkit-progress-value {
+  background: var(--primary-strong);
+}
+.scrollStatus progress::-moz-progress-bar {
+  background: var(--primary-strong);
 }
 .nav {
   position: relative;
-  margin: 0 auto;
+  /* Keep the raised + icon below the scroll controls as well as the main. */
+  margin: 12px auto 0;
   width: min(100%, 1120px);
   min-height: 74px;
   padding: 8px 8px max(8px, env(safe-area-inset-bottom));
