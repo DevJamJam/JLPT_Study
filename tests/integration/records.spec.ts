@@ -274,6 +274,32 @@ test('실제 멤버 공개 DTO·가입순·최신 이모지와 달력501건·빈
   ).toBe(403);
 });
 
+test('실제 주간 집계는100행 상한·0일 멤버·기록 변경과 삭제를 반영한다', async () => {
+  const query = '?week=2026-09-07';
+  const initial = await http.study(req(query));
+  expect(initial.status).toBe(200);
+  const data = (await initial.json()).data;
+  expect(data.totalMinutes).toBe(501);
+  expect(data.activeMembers).toBe(1);
+  expect(data.members).toHaveLength(2);
+  expect(data.members.find((member: { id: string }) => member.id === user).studyDays).toBe(0);
+  expect(data.members.every((member: { days: unknown[] }) => member.days.length === 7)).toBe(true);
+  const id = '46000000-0000-4000-8000-000000000860';
+  const input = { id, studyDate: '2026-09-08', minutes: 30, categoryId: category };
+  expect((await http.create(req('', input))).status).toBe(200);
+  expect((await (await http.study(req(query))).json()).data.totalMinutes).toBe(531);
+  expect(
+    (await http.update(req('', { ...input, minutes: 60, expectedVersion: 1 }, token, 'PATCH'), id))
+      .status,
+  ).toBe(200);
+  expect((await (await http.study(req(query))).json()).data.totalMinutes).toBe(561);
+  expect((await http.delete(req('', { expectedVersion: 2 }, token, 'DELETE'), id)).status).toBe(
+    200,
+  );
+  expect((await (await http.study(req(query))).json()).data.totalMinutes).toBe(501);
+  expect((await http.study(req(query, undefined, limitedToken))).status).toBe(403);
+});
+
 test('다른 그룹은404, 같은 그룹 기록은 조회 가능, 제한·폐기 세션은 차단한다', async () => {
   expect((await http.get(req(), '46000000-0000-4000-8000-000000000900')).status).toBe(404);
   expect((await http.get(req(), '46000000-0000-4000-8000-000000001000')).status).toBe(200);

@@ -6,12 +6,16 @@ import { isDateKey } from '../../lib/seoul-date';
 import { isUuid, isTimestamp, type RecordQuery } from '../records/query';
 import type { CalendarDay, StudyMember } from '../../features/calendar/types';
 import { calendarDays, type CalendarRecord } from './aggregate';
+import { weeklyStudy } from '../study/aggregate';
+import { shiftDate } from '../../features/calendar/dates';
+import type { StudyWeek } from '../../features/study/types';
 
 const unavailable = () => new AuthServiceError(503, 'AUTH_UNAVAILABLE');
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 export type CalendarDatabase = {
   listMembers(groupId: string): Promise<StudyMember[]>;
+  getStudy(week: string, actorId: string, groupId: string): Promise<StudyWeek>;
   getCalendar(
     query: Extract<RecordQuery, { kind: 'period' }>,
     actorId: string,
@@ -65,56 +69,77 @@ export function createCalendarDatabase(
       offset += rows.length;
     }
   }
+  async function readPeriod(
+    input: Extract<RecordQuery, { kind: 'period' }>,
+    actorId: string,
+    groupId: string,
+  ) {
+    if (!isUuid(actorId) || !isUuid(groupId)) throw unavailable();
+    const members = await listMembers(groupId);
+    const memberIds = new Set(members.map((member) => member.id));
+    if (!memberIds.has(actorId)) throw new AuthServiceError(401, 'UNAUTHORIZED');
+    const query = new URLSearchParams({
+      select: 'id,group_id,user_id,study_date,minutes',
+      group_id: `eq.${groupId}`,
+      order: 'id.asc',
+      limit: '100',
+    });
+    query.append('study_date', `gte.${input.from}`);
+    query.append('study_date', `lte.${input.to}`);
+    if (input.scope === 'mine') query.set('user_id', `eq.${actorId}`);
+    const records: CalendarRecord[] = [];
+    let after = '';
+    for (;;) {
+      if (after) query.set('id', `gt.${after}`);
+      const rows = await request(`study_records?${query}`);
+      if (!Array.isArray(rows) || rows.length > 100) throw unavailable();
+      for (const row of rows) {
+        if (
+          !object(row) ||
+          !isUuid(row.id) ||
+          row.id <= after ||
+          row.group_id !== groupId ||
+          !isUuid(row.user_id) ||
+          !memberIds.has(row.user_id) ||
+          (input.scope === 'mine' && row.user_id !== actorId) ||
+          !isDateKey(row.study_date) ||
+          row.study_date < input.from ||
+          row.study_date > input.to ||
+          !Number.isInteger(row.minutes) ||
+          (row.minutes as number) < 1 ||
+          (row.minutes as number) > 1440
+        )
+          throw unavailable();
+        records.push({
+          id: row.id,
+          userId: row.user_id,
+          studyDate: row.study_date,
+          minutes: row.minutes as number,
+        });
+        after = row.id;
+      }
+      if (!rows.length) break;
+    }
+    return { members, records };
+  }
   return {
     listMembers,
     async getCalendar(input, actorId, groupId) {
-      if (!isUuid(actorId) || !isUuid(groupId)) throw unavailable();
-      const members = await listMembers(groupId);
-      const memberIds = new Set(members.map((member) => member.id));
-      if (!memberIds.has(actorId)) throw new AuthServiceError(401, 'UNAUTHORIZED');
-      const query = new URLSearchParams({
-        select: 'id,group_id,user_id,study_date,minutes',
-        group_id: `eq.${groupId}`,
-        order: 'id.asc',
-        limit: '100',
-      });
-      query.append('study_date', `gte.${input.from}`);
-      query.append('study_date', `lte.${input.to}`);
-      if (input.scope === 'mine') query.set('user_id', `eq.${actorId}`);
-      const records: CalendarRecord[] = [];
-      let after = '';
-      for (;;) {
-        if (after) query.set('id', `gt.${after}`);
-        const rows = await request(`study_records?${query}`);
-        if (!Array.isArray(rows) || rows.length > 100) throw unavailable();
-        for (const row of rows) {
-          if (
-            !object(row) ||
-            !isUuid(row.id) ||
-            row.id <= after ||
-            row.group_id !== groupId ||
-            !isUuid(row.user_id) ||
-            !memberIds.has(row.user_id) ||
-            (input.scope === 'mine' && row.user_id !== actorId) ||
-            !isDateKey(row.study_date) ||
-            row.study_date < input.from ||
-            row.study_date > input.to ||
-            !Number.isInteger(row.minutes) ||
-            (row.minutes as number) < 1 ||
-            (row.minutes as number) > 1440
-          )
-            throw unavailable();
-          records.push({
-            id: row.id,
-            userId: row.user_id,
-            studyDate: row.study_date,
-            minutes: row.minutes as number,
-          });
-          after = row.id;
-        }
-        if (!rows.length) break;
-      }
+      const { members, records } = await readPeriod(input, actorId, groupId);
       return calendarDays(input.from, input.to, records, members);
+    },
+    async getStudy(week, actorId, groupId) {
+      const { members, records } = await readPeriod(
+        {
+          kind: 'period',
+          scope: 'group',
+          from: week < '2000-01-01' ? '2000-01-01' : week,
+          to: shiftDate(week, 6),
+        },
+        actorId,
+        groupId,
+      );
+      return weeklyStudy(week, records, members);
     },
   };
 }
