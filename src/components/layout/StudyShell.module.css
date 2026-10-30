@@ -62,7 +62,8 @@
   padding: 24px 16px 32px;
   overflow-y: auto;
   overscroll-behavior-y: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
 }
 .month .content,
 .week .content {

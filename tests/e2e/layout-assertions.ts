@@ -8,6 +8,9 @@ export async function separatedShell(page: Page) {
     const main = element.querySelector(':scope > main')!.getBoundingClientRect();
     const footer = element.querySelector(':scope > footer')!.getBoundingClientRect();
     const nav = element.querySelector('nav')!;
+    const content = element
+      .querySelector(':scope > main')!
+      .firstElementChild!.getBoundingClientRect();
     return {
       headerBottom: header.bottom,
       mainTop: main.top,
@@ -22,6 +25,8 @@ export async function separatedShell(page: Page) {
       viewportHeight: innerHeight,
       documentHeight: document.documentElement.scrollHeight,
       bodyScroll: window.scrollY,
+      contentCenter: content.x + content.width / 2,
+      viewportCenter: innerWidth / 2,
     };
   });
   expect(geometry.headerBottom).toBeLessThanOrEqual(geometry.mainTop + 1);
@@ -30,6 +35,7 @@ export async function separatedShell(page: Page) {
   expect(geometry.footerBottom).toBeLessThanOrEqual(geometry.viewportHeight + 1);
   expect(geometry.documentHeight).toBeLessThanOrEqual(geometry.viewportHeight + 1);
   expect(geometry.bodyScroll).toBe(0);
+  expect(Math.abs(geometry.contentCenter - geometry.viewportCenter)).toBeLessThanOrEqual(1);
   return shell.locator(':scope > main');
 }
 
