@@ -117,7 +117,7 @@ export function DesignPreview() {
   }
 
   return (
-    <>
+    <div className={styles.previewFrame}>
       <aside className={styles.previewBar} aria-label="디자인 검토 도구">
         <span>디자인 검토 · 가상 데이터 · 기준일 {TODAY} · 저장·인증 미연결</span>
         <Button
@@ -541,7 +541,7 @@ export function DesignPreview() {
           )}
         </StudyDialog>
       )}
-    </>
+    </div>
   );
 }
 

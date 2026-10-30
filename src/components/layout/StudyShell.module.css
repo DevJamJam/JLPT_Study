@@ -1,5 +1,8 @@
 .shell {
-  min-height: 100svh;
+  height: var(--study-shell-height, 100dvh);
+  display: grid;
+  grid-template-rows: 64px minmax(0, 1fr) auto;
+  overflow: hidden;
   background: var(--bg);
 }
 .month,
@@ -52,19 +55,27 @@
   line-height: 1;
 }
 .content {
+  width: 100%;
+  min-height: 0;
   max-width: 1120px;
-  margin: auto;
-  padding: 24px 16px 120px;
+  margin: 0 auto;
+  padding: 24px 16px 32px;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable both-edges;
+  scrollbar-width: thin;
 }
 .month .content,
 .week .content {
   padding-top: 0;
 }
+.footer {
+  /* Reserve space for the raised add button outside the scrolling content. */
+  padding-top: 12px;
+}
 .nav {
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
+  position: relative;
+  margin: 0 auto;
   width: min(100%, 1120px);
   min-height: 74px;
   padding: 8px 8px max(8px, env(safe-area-inset-bottom));

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { separatedShell } from './layout-assertions';
 
 test.use({ actionTimeout: 6000 });
 const user = '60000000-0000-4000-8000-000000000001';
@@ -106,7 +107,7 @@ test('가입순15명·0일 멤버·7칸 막대와 공통 메뉴를 연결한다'
   await expect(page.getByRole('button', { name: '다음 주' })).toBeDisabled();
   await page.screenshot({
     path: `test-results/${info.project.name}-study-live.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.getByRole('button', { name: '내 설정 열기' }).click();
   await expect(page.getByRole('dialog', { name: '내 설정', exact: true })).toBeVisible();
@@ -121,6 +122,52 @@ test('가입순15명·0일 멤버·7칸 막대와 공통 메뉴를 연결한다'
     .click();
   await expect(page).toHaveURL(/\/study/);
   await expect(page.locator('[data-member-id]')).toHaveCount(15);
+});
+
+test('본문 처음·중간·끝에서 메뉴와 겹치지 않고 마지막 카드·팝업 복귀를 확인한다', async ({
+  page,
+}, info) => {
+  await setup(page);
+  const main = await separatedShell(page);
+  for (const [name, fraction] of [
+    ['top', 0],
+    ['middle', 0.5],
+    ['bottom', 1],
+  ] as const) {
+    await main.evaluate((element, fraction) => {
+      element.scrollTop = (element.scrollHeight - element.clientHeight) * fraction;
+    }, fraction);
+    await separatedShell(page);
+    await page.screenshot({
+      path: `test-results/${info.project.name}-study-layout-${name}.png`,
+      fullPage: false,
+    });
+  }
+  const last = page.locator('[data-member-id]').last();
+  const visible = await last.evaluate((element) => {
+    const card = element.getBoundingClientRect();
+    const main = element.closest('main')!.getBoundingClientRect();
+    const hit = document.elementFromPoint(card.x + card.width / 2, card.y + card.height / 2);
+    return {
+      top: card.top,
+      bottom: card.bottom,
+      mainTop: main.top,
+      mainBottom: main.bottom,
+      reachable: !!hit && element.contains(hit),
+    };
+  });
+  expect(visible.top).toBeGreaterThanOrEqual(visible.mainTop);
+  expect(visible.bottom).toBeLessThanOrEqual(visible.mainBottom);
+  expect(visible.reachable).toBe(true);
+  const position = await main.evaluate((element) => element.scrollTop);
+  expect(position).toBeGreaterThan(0);
+  await page.getByRole('button', { name: '새 공부 기록', exact: true }).click();
+  await expect(page.getByRole('form', { name: '공부 기록 입력' })).toBeVisible();
+  expect(await main.evaluate((element) => getComputedStyle(element).overflowY)).toBe('hidden');
+  await page.getByRole('button', { name: '팝업 닫기' }).click();
+  await expect(page.getByRole('form', { name: '공부 기록 입력' })).toHaveCount(0);
+  expect(await main.evaluate((element) => element.scrollTop)).toBeCloseTo(position, 0);
+  await separatedShell(page);
 });
 
 test('주간 이동·잘못된 주소 정리·조회 실패와 세션 만료를 구분한다', async ({ page }) => {

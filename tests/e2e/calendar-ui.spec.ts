@@ -1,3 +1,4 @@
+import { captureShellScroll, separatedShell } from './layout-assertions';
 import { test, expect, type Page, type Route } from '@playwright/test';
 
 test.use({ actionTimeout: 6000 });
@@ -172,19 +173,29 @@ async function newForm(page: Page, date = '2026-10-28') {
 test('월간42칸·15명 축약·개인 보기·공통 메뉴를 실제 데이터로 연결한다', async ({ page }, info) => {
   await setup(page, '/calendar', true);
   await expect(page.getByTestId('live-month-grid').locator('button')).toHaveCount(42);
+  const main = await captureShellScroll(page, info.project.name, 'calendar');
+  const lastDate = page.getByTestId('live-month-grid').locator('button').last();
+  const lastBounds = (await lastDate.boundingBox())!;
+  const mainBounds = (await main.boundingBox())!;
+  expect(lastBounds.y + lastBounds.height).toBeLessThanOrEqual(mainBounds.y + mainBounds.height);
+  await lastDate.click({ trial: true });
+  await main.evaluate((element) => {
+    element.scrollTop = 0;
+  });
+  await separatedShell(page);
   const wide = info.project.name !== 'SE3';
   await expect(day(page).getByText(wide ? '+4' : '+12', { exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({
     path: `test-results/${info.project.name}-calendar-group.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.getByRole('button', { name: '내 월간', exact: true }).click();
   await expect(day(page).getByText('30분', { exact: true })).toBeVisible();
   await expect(day(page).getByText('+12', { exact: true })).toHaveCount(0);
   await page.screenshot({
     path: `test-results/${info.project.name}-calendar-mine.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.getByRole('button', { name: '내 설정 열기' }).click();
   await expect(page.getByRole('dialog', { name: '내 설정', exact: true })).toBeVisible();
@@ -293,6 +304,7 @@ test('뒤로가기 취소는 초안을 유지하고 제출 중에는 팝업을 �
 test('주간 날짜·빈 날 추가·기간 이동과 하단 오늘 추가를 연결한다', async ({ page }, info) => {
   await setup(page);
   await page.getByRole('button', { name: '내 주간', exact: true }).click();
+  await separatedShell(page);
   await expect(page.getByTestId('week-grid').locator('[data-week-date]')).toHaveCount(7);
   const empty = page.locator('[data-week-date="2026-10-28"]');
   await empty.getByRole('button', { name: '기록 추가 ＋', exact: true }).click();
@@ -303,7 +315,7 @@ test('주간 날짜·빈 날 추가·기간 이동과 하단 오늘 추가를 �
   await page.getByRole('button', { name: '팝업 닫기' }).click();
   await page.screenshot({
     path: `test-results/${info.project.name}-calendar-week.png`,
-    fullPage: true,
+    fullPage: false,
   });
   await page.getByRole('button', { name: '이전 주' }).click();
   await expect(page.locator('[data-week-date="2026-10-19"]')).toBeVisible();
