@@ -3,6 +3,8 @@ import { execFileSync } from 'node:child_process';
 import { NextRequest } from 'next/server';
 import { hashSessionToken } from '../../src/server/auth/crypto';
 import { createRecordsHttp } from '../../src/server/records/http';
+import { createAdminHttp } from '../../src/server/admin/http';
+import { scryptSync } from 'node:crypto';
 
 const databaseUrl = process.env.JLPT_TEST_DATABASE_URL;
 const restUrl = process.env.JLPT_TEST_POSTGREST_URL;
@@ -310,4 +312,80 @@ test('다른 그룹은404, 같은 그룹 기록은 조회 가능, 제한·폐기
   const revoked = await http.list(req('?scope=mine&month=2026-09'));
   expect(revoked.status).toBe(401);
   expect(revoked.headers.get('set-cookie')).toContain('__Host-jlpt_session=;');
+});
+
+test('실제 REST/DB에서 관리자 로그인·종류 CRUD·사용 중 삭제 거부·로그아웃을 확인한다', async () => {
+  const password = 'isolated-ci-admin-password';
+  const hash = scryptSync(password, Buffer.alloc(16), 32, {
+    N: 32768,
+    r: 8,
+    p: 3,
+    maxmem: 64 * 1024 * 1024,
+  }).toString('hex');
+  sql(
+    `update public.admin_accounts set login_id='ADMIN',password_hash='${hash}',salt='AAAAAAAAAAAAAAAAAAAAAA==',hash_params='{"algorithm":"scrypt","N":32768,"r":8,"p":3,"dkLen":32}';`,
+  );
+  const adminHttp = createAdminHttp({ ...env, VERCEL: '1' }, transport);
+  const adminRequest = (
+    body?: unknown,
+    cookie = '',
+    method = body === undefined ? 'GET' : 'POST',
+  ) =>
+    new NextRequest(`${origin}/api/admin`, {
+      method,
+      headers: {
+        origin,
+        'content-type': 'application/json',
+        'x-vercel-forwarded-for': '192.0.2.68',
+        cookie,
+      },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+  const loggedIn = await adminHttp.login(adminRequest({ loginId: 'ADMIN', password }));
+  expect(loggedIn.status).toBe(200);
+  const session = loggedIn.cookies.get('__Host-jlpt_admin_session')!;
+  const cookie = `__Host-jlpt_admin_session=${session.value}`;
+  expect((await adminHttp.me(adminRequest(undefined, cookie))).status).toBe(200);
+  const id = '46000000-0000-4000-8000-000000009999';
+  expect(
+    (await adminHttp.createCategory(adminRequest({ id, name: '관리작문' }, cookie))).status,
+  ).toBe(200);
+  expect(
+    (await adminHttp.createCategory(adminRequest({ id, name: '관리작문' }, cookie))).status,
+  ).toBe(200);
+  expect(
+    (
+      await adminHttp.updateCategory(
+        adminRequest({ name: '관리독해', expectedName: '관리작문' }, cookie, 'PATCH'),
+        id,
+      )
+    ).status,
+  ).toBe(200);
+  expect(
+    (
+      await adminHttp.updateCategory(
+        adminRequest({ name: '잘못덮기', expectedName: '관리작문' }, cookie, 'PATCH'),
+        id,
+      )
+    ).status,
+  ).toBe(409);
+  expect(
+    (
+      await adminHttp.deleteCategory(
+        adminRequest({ expectedName: '관리독해' }, cookie, 'DELETE'),
+        id,
+      )
+    ).status,
+  ).toBe(200);
+  const protectedCategory = sql(
+    `select name from public.study_categories where id='${category}';`,
+  ).trim();
+  const blocked = await adminHttp.deleteCategory(
+    adminRequest({ expectedName: protectedCategory }, cookie, 'DELETE'),
+    category,
+  );
+  expect(blocked.status).toBe(409);
+  expect((await blocked.json()).error.code).toBe('CATEGORY_IN_USE');
+  expect((await adminHttp.logout(adminRequest({}, cookie))).status).toBe(200);
+  expect((await adminHttp.me(adminRequest(undefined, cookie))).status).toBe(401);
 });

@@ -267,7 +267,9 @@ test('무세션·관리자 쿠키·제한 세션은 멤버와 달력을 읽을 �
   for (const action of ['members', 'calendar'] as const) {
     for (const cookie of ['', '__Host-jlpt_admin_session=' + 'a'.repeat(43)]) {
       const { http, calls } = fixture();
-      expect((await http[action](req(period, cookie))).status).toBe(401);
+      expect((await http[action](req(period, cookie))).status).toBe(
+        cookie.includes('admin_session') ? 403 : 401,
+      );
       expect(calls).toHaveLength(0);
     }
     const { http, calls } = fixture({ limited: true });

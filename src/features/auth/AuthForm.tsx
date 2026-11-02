@@ -29,6 +29,10 @@ export function AuthForm({ mode }: { mode: 'login' | 'join' }) {
       setError('닉네임은 2~12자로 입력해주세요.');
       return;
     }
+    if (joining && normalized.nicknameKey === 'admin') {
+      setError('ADMIN은 관리자 전용 이름이에요. 다른 닉네임을 입력해주세요.');
+      return;
+    }
     if (!isPin(pin)) {
       setError('간편 비밀번호는 숫자 4자리로 입력해주세요.');
       return;

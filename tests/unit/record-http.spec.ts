@@ -119,7 +119,9 @@ test('생성은 세션 주체를 주입하며 재시도 뒤 현재 기록을 읽
 test('무쿠키·관리자 쿠키·잘못된 토큰·다른 출처는 저장 전에 거부한다', async () => {
   for (const cookie of ['', '__Host-jlpt_admin_session=' + token, '__Host-jlpt_session=bad']) {
     const { http, calls } = fixture();
-    expect((await http.create(req('', input, cookie))).status).toBe(401);
+    expect((await http.create(req('', input, cookie))).status).toBe(
+      cookie.includes('admin_session') ? 403 : 401,
+    );
     expect(calls).toHaveLength(0);
   }
   const { http, calls } = fixture();
@@ -259,7 +261,9 @@ test('수정·삭제도 제한 세션·무쿠키·외부 Origin과 JSON 이외 �
     expect((await fixture({ limited: true }).http[action](mutation(body), id)).status).toBe(403);
     for (const cookie of ['', '__Host-jlpt_admin_session=' + token]) {
       const { http, calls } = fixture();
-      expect((await http[action](mutation(body, 'PATCH', cookie), id)).status).toBe(401);
+      expect((await http[action](mutation(body, 'PATCH', cookie), id)).status).toBe(
+        cookie.includes('admin_session') ? 403 : 401,
+      );
       expect(calls).toHaveLength(0);
     }
     const { http, calls } = fixture();

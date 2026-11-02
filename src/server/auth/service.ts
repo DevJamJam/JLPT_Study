@@ -92,6 +92,8 @@ export async function authenticate(
     throw new AuthServiceError(400, 'VALIDATION_ERROR');
   const data = input as Record<string, unknown> | null;
   const normalized = normalizeNickname(data?.nickname);
+  if (kind === 'join' && normalized?.nicknameKey === 'admin')
+    throw new AuthServiceError(409, 'NICKNAME_RESERVED');
   const joined = kind === 'join' ? validateJoinInput(input) : null;
   if (!data || !normalized || !isPin(data.pin) || (kind === 'join' && !joined))
     throw new AuthServiceError(400, 'VALIDATION_ERROR');
