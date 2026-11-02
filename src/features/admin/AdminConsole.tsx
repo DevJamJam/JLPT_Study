@@ -322,12 +322,7 @@ function Workspace({ view }: { view: View }) {
                       </div>
                     </form>
                   </section>
-                ) : (
-                  <p className={styles.muted}>
-                    일반 회원 {members.data?.members.length ?? '…'} / 15명 · 관리자 계정은 정원에
-                    포함되지 않아요.
-                  </p>
-                )}
+                ) : null}
                 <div className={styles.listHeader}>
                   <h2>{view === 'users' ? '스터디 회원' : '등록된 공부 종류'}</h2>
                   <Button
