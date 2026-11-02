@@ -57,6 +57,37 @@ test('기존 계정은 초기 비밀번호 없이 확인만 하고 변경하지 
   assert.equal(count, 1);
 });
 
+test('확정된 한글 관리자 아이디 관리로 생성하고 유효하지 않은 아이디는 삽입하지 않는다', async () => {
+  let inserted;
+  assert.deepEqual(
+    await bootstrapAdmin({ ...env, ADMIN_LOGIN_ID: '관리' }, async (_url, options) => {
+      if (options.method === 'POST') inserted = JSON.parse(options.body);
+      return Response.json(options.method === 'POST' ? [{ id }] : []);
+    }),
+    { status: 'created' },
+  );
+  assert.equal(inserted.login_id, '관리');
+  for (const loginId of [
+    '관',
+    '관'.repeat(65),
+    ' 관리',
+    '관리 ',
+    '관 리',
+    '관리\u200b',
+    '관리\n',
+    '🐰관리',
+    '관리/자',
+  ]) {
+    await assert.rejects(
+      bootstrapAdmin({ ...env, ADMIN_LOGIN_ID: loginId }, async (_url, options) => {
+        assert.notEqual(options.method, 'POST');
+        return Response.json([]);
+      }),
+      { message: 'ADMIN_BOOTSTRAP_FAILED' },
+    );
+  }
+});
+
 test('동시 실행도 충돌 시 기존 계정을 갱신하지 않는다', async () => {
   let stored;
   let inserts = 0;

@@ -56,7 +56,7 @@ export async function bootstrapAdmin(env, transport = fetch) {
     const password = env.ADMIN_INITIAL_PASSWORD;
     if (
       typeof loginId !== 'string' ||
-      !/^[A-Za-z0-9][A-Za-z0-9._-]{2,63}$/.test(loginId) ||
+      !/^[A-Za-z0-9가-힣][A-Za-z0-9가-힣._-]{1,63}$/u.test(loginId) ||
       typeof password !== 'string' ||
       [...password].length < 12 ||
       [...password].length > 128 ||
