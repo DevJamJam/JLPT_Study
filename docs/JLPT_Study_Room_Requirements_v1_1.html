@@ -547,7 +547,7 @@
           </tr>
           <tr>
             <td>study_categories</td>
-            <td>id UUID PK, name, name_key UNIQUE, seed_key nullable UNIQUE, sort_order UNIQUE, created_at</td>
+            <td>id UUID PK, name, name_key UNIQUE, sort_order UNIQUE, created_at</td>
           </tr>
         </table>
       </div>
@@ -940,47 +940,9 @@ docs/                execution-spec, decisions, feedback, releases, blog</code><
       <p>이 문서의 수치형 정책(5회/15분,30일 등)은 제품설계 기본값이며 공식서비스의 고정제한이라는 의미가 아니다. 버전·가격·플랫폼제한은 착수시 다시 확인해 고정한다.</p>
       <h2 id="section-27">17. 구현 계약 보완 — 개발자가 임의로 채우지 않는 값</h2>
       <h3 id="section-28">기본 종류·단위·이모지 색상</h3>
-      <p>아래 종류의 저장 값은 초기 시드의 고유 키다. 실제 기록은 UUID categoryId를 저장하며 목록은 API에서 조회한다. 추가 종류에는 서버가 UUID를 발급한다.</p>
-      <div class="table">
-        <table>
-          <tr>
-            <th>표시</th>
-            <th>저장 값</th>
-          </tr>
-          <tr>
-            <td>단어</td>
-            <td>vocabulary</td>
-          </tr>
-          <tr>
-            <td>한자</td>
-            <td>kanji</td>
-          </tr>
-          <tr>
-            <td>문법</td>
-            <td>grammar</td>
-          </tr>
-          <tr>
-            <td>독해</td>
-            <td>reading</td>
-          </tr>
-          <tr>
-            <td>청해</td>
-            <td>listening</td>
-          </tr>
-          <tr>
-            <td>회화</td>
-            <td>conversation</td>
-          </tr>
-          <tr>
-            <td>기타</td>
-            <td>other</td>
-          </tr>
-          <tr>
-            <td>개 / 쪽 / 문제</td>
-            <td>item / page / question</td>
-          </tr>
-        </table>
-      </div>
+      <p>기본 종류와 추가 종류는 모두 UUID id를 고유 키로 사용한다. 기록은 categoryId로 참조하고 이름 수정 시 ID를 유지한다. 영어 번역 키는 사용하지 않는다.</p>
+      <p>기본 종류: 단어 / 한자 / 문법 / 독해 / 청해 / 회화 / 기타.</p>
+      <p>공부량 단위: 개 / 쪽 / 문제 → item / page / question.</p>
       <div class="table">
         <table>
           <tr>

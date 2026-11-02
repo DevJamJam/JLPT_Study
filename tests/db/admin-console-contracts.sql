@@ -8,6 +8,7 @@ begin
   exception when others then if position(expected in sqlerrm)>0 then return; end if; raise; end;
   raise exception 'Expected: %',expected;
 end $$;
+select pg_temp.admin_assert(not exists(select 1 from information_schema.columns where table_schema='public' and table_name='study_categories' and column_name='seed_key'),'no legacy English identity');
 select pg_temp.admin_assert(not has_function_privilege('anon','public.require_admin(text)','execute'),'anon denied');
 select pg_temp.admin_assert(not has_function_privilege('authenticated','public.manage_category(text,text,uuid,text,text)','execute'),'browser role denied');
 set local role service_role;
@@ -29,6 +30,15 @@ select public.create_user_session('68000000-0000-4000-8000-000000000020',1,'68'|
 insert into public.study_records(id,group_id,user_id,study_date,minutes,category_id,create_fingerprint)
   values('68000000-0000-4000-8000-000000000030','68000000-0000-4000-8000-000000000010','68000000-0000-4000-8000-000000000020','2026-10-01',5,'68000000-0000-4000-8000-000000000001',repeat('1',64));
 select pg_temp.admin_error($q$select public.manage_category('68'||repeat('a',62),'delete','68000000-0000-4000-8000-000000000001',null,'작문')$q$,'CATEGORY_IN_USE');
+-- Added categories retain their ID and record references after renaming.
+select public.manage_category('68'||repeat('a',62),'update','68000000-0000-4000-8000-000000000001','작문연습','작문');
+select pg_temp.admin_assert(exists(select 1 from public.study_records r join public.study_categories c on c.id=r.category_id where r.id='68000000-0000-4000-8000-000000000030' and c.id='68000000-0000-4000-8000-000000000001' and c.name='작문연습'),'added rename keeps record identity');
+select public.manage_category('68'||repeat('a',62),'update','68000000-0000-4000-8000-000000000001','작문','작문연습');
+-- Seeded categories use the same rename contract; existing referenced records remain attached.
+create temporary table initial_category_identity as select id from public.study_categories where name='단어';
+select public.manage_category('68'||repeat('a',62),'update',(select id from initial_category_identity),'어휘연습','단어');
+select pg_temp.admin_assert(exists(select 1 from public.study_records r join public.study_categories c on c.id=r.category_id where c.id=(select id from initial_category_identity) and c.name='어휘연습'),'seeded rename keeps record identity');
+select public.manage_category('68'||repeat('a',62),'update',(select id from initial_category_identity),'단어','어휘연습');
 select pg_temp.admin_assert((public.list_admin_members('68'||repeat('a',62)))::text not like '%pin_hash%','member DTO excludes secret');
 select public.reset_admin_member_pin('68'||repeat('a',62),'68000000-0000-4000-8000-000000000020',1,'68000000-0000-4000-8000-000000000040',repeat('2',64),repeat('3',64),'AAAAAAAAAAAAAAAAAAAAAA==','{"algorithm":"scrypt","N":32768,"r":8,"p":3,"dkLen":32}',repeat('4',64));
 select public.reset_admin_member_pin('68'||repeat('a',62),'68000000-0000-4000-8000-000000000020',1,'68000000-0000-4000-8000-000000000040',repeat('2',64),repeat('5',64),'AAAAAAAAAAAAAAAAAAAAAA==','{"algorithm":"scrypt","N":32768,"r":8,"p":3,"dkLen":32}',repeat('4',64));

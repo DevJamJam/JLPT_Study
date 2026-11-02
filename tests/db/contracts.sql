@@ -60,7 +60,7 @@ create function pg_temp.save(
   note text default null, category uuid default null
 ) returns public.study_records language sql as $$
   select public.save_record(actor, '00000000-0000-0000-0000-000000000001', record_id,
-    day, minutes, coalesce(category, (select id from public.study_categories where seed_key = 'vocabulary')),
+    day, minutes, coalesce(category, (select id from public.study_categories where name = '단어')),
     start_at, amount, unit, note, fingerprint, version);
 $$;
 
@@ -115,7 +115,7 @@ select pg_temp.assert_true((select count(*)=1 from public.admin_accounts)
   and exists (select 1 from public.admin_accounts where login_id='test'
     and password_hash='TEST_HASH' and salt='TEST_SALT' and credential_version=1),
   'admin bootstrap retry preserves existing credential');
-select pg_temp.expect_error($q$delete from public.study_categories where seed_key = 'vocabulary'$q$, 'study_records_category_id_fkey');
+select pg_temp.expect_error($q$delete from public.study_categories where name = '단어'$q$, 'study_records_category_id_fkey');
 select pg_temp.expect_error($q$insert into public.users (nickname,nickname_key,emoji) values ('토끼','토끼','🐰')$q$, '23505');
 select pg_temp.expect_error($q$update public.study_records set quantity = 1, quantity_unit = null$q$, '23514');
 select pg_temp.expect_error($q$update public.study_records set minutes = 0$q$, '23514');

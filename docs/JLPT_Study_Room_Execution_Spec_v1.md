@@ -205,7 +205,7 @@ SE3는 375px 세로 화면 기준을 우선 검증하고 320px는 확대·좁은
 
 | admin_accounts | id UUID PK, singleton boolean NOT NULL default true UNIQUE CHECK(singleton=true), login_id UNIQUE, password_hash, salt, hash_params, credential_version, created_at |
 | admin_sessions | token_hash text PK, admin_id FK admin_accounts CASCADE, credential_version, expires_at, created_at |
-| study_categories | id UUID PK, name, name_key UNIQUE, seed_key nullable UNIQUE, sort_order UNIQUE, created_at |
+| study_categories | id UUID PK, name, name_key UNIQUE, sort_order UNIQUE, created_at |
 
 계정 삭제는 운영자 작업이며 로그인한 스터디원은 타인 계정을 삭제할 수 없다. 데이터 정리 후 가입 인원은 현재 group_members 수로 계산한다.
 
@@ -411,18 +411,10 @@ Vitest: 날짜/합산/validation/+N. 서버·DB integration: 시도제한·정�
 
 ### 기본 종류·단위·이모지 색상
 
-아래 종류의 저장 값은 초기 시드의 고유 키다. 실제 기록은 UUID categoryId를 저장하며 목록은 API에서 조회한다. 추가 종류에는 서버가 UUID를 발급한다.
+기본 종류와 추가 종류는 모두 UUID `id`를 고유 키로 사용한다. 실제 기록은 `categoryId`로 참조하며 목록은 API에서 조회한다. 종류 이름 수정 시 ID는 유지하고 현재 이름을 표시한다. 영어 번역 키는 사용하지 않는다.
 
-| 표시 | 저장 값 |
-|---|---|
-| 단어 | vocabulary |
-| 한자 | kanji |
-| 문법 | grammar |
-| 독해 | reading |
-| 청해 | listening |
-| 회화 | conversation |
-| 기타 | other |
-| 개 / 쪽 / 문제 | item / page / question |
+기본 종류: 단어 / 한자 / 문법 / 독해 / 청해 / 회화 / 기타.
+공부량 단위: 개 / 쪽 / 문제 → item / page / question.
 
 | 이모지 | 막대 색상 HEX | 이모지 | 막대 색상 HEX |
 |---|---|---|---|
