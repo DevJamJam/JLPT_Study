@@ -48,6 +48,7 @@ export function validateJoinInput(input: unknown) {
   const normalized = normalizeNickname(data.nickname);
   if (
     !normalized ||
+    normalized.nicknameKey === 'admin' ||
     !isPin(data.pin) ||
     data.pinConfirm !== data.pin ||
     typeof data.requestId !== 'string' ||

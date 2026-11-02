@@ -28,7 +28,12 @@ export function confirmRecordDelete(description: string) {
   );
 }
 
-async function confirmAction(title: string, message: string, confirm: string, cancel: string) {
+export async function confirmAction(
+  title: string,
+  message: string,
+  confirm: string,
+  cancel: string,
+) {
   const dialog = document.querySelector<HTMLDialogElement>('dialog[open]');
   const previous = document.activeElement as HTMLElement | null;
   dialog?.close();

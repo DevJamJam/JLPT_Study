@@ -60,6 +60,7 @@ export async function jsonRequest<Data>(
 export function authErrorMessage(error: unknown) {
   const messages: Record<string, string> = {
     NICKNAME_TAKEN: '이미 사용 중인 닉네임이에요. 다른 닉네임을 입력해주세요.',
+    NICKNAME_RESERVED: 'ADMIN은 관리자 전용 이름이에요. 다른 닉네임을 입력해주세요.',
     GROUP_FULL: '스터디 정원이 가득 찼어요. 관리자에게 문의해주세요.',
     IDEMPOTENCY_CONFLICT: '가입 요청 내용이 달라졌어요. 입력을 확인해주세요.',
     INVALID_CREDENTIALS: '닉네임 또는 간편 비밀번호를 확인해주세요.',

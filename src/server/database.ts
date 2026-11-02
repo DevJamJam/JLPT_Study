@@ -43,6 +43,8 @@ export function createDatabaseRequest(
           CONFLICT: 409,
           RECORD_DELETED: 409,
           DAILY_LIMIT_EXCEEDED: 409,
+          CATEGORY_EXISTS: 409,
+          CATEGORY_IN_USE: 409,
         };
         if (
           object(data) &&

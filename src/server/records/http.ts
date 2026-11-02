@@ -8,6 +8,7 @@ import { createRecordDatabase } from './database';
 import { mutateRecord } from './mutate';
 import { isUuid, parseRecordQuery } from './query';
 import { parseStudyWeek } from '../study/query';
+import { adminTokenHash, createAdminHttp } from '../admin/http';
 
 const messages: Record<string, string> = {
   VALIDATION_ERROR: '공부 기록의 입력과 조회 조건을 확인해주세요.',
@@ -41,6 +42,10 @@ export function createRecordsHttp(
     const response = await (async () => {
       try {
         const hash = tokenHash(request, production);
+        if (!hash && adminTokenHash(request, production)) {
+          if (action === 'categories') return createAdminHttp(env, transport).categories(request);
+          throw new AuthServiceError(403, 'FORBIDDEN');
+        }
         if (!hash) throw new AuthServiceError(401, 'UNAUTHORIZED');
         const config = loadAuthConfig(env);
         const body = ['create', 'update', 'delete'].includes(action)

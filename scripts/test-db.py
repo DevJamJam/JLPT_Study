@@ -39,6 +39,7 @@ run((ROOT / "tests/db/complete-reset-contracts.sql").read_text())
 run((ROOT / "tests/db/change-pin-contracts.sql").read_text())
 run((ROOT / "tests/db/profile-emoji-contracts.sql").read_text())
 run((ROOT / "tests/db/auth-limit-contracts.sql").read_text())
+run((ROOT / "tests/db/admin-console-contracts.sql").read_text())
 
 
 def check_race(first_file, second_file, expected_error):
