@@ -377,7 +377,9 @@ test('실제 REST/DB에서 관리자 로그인·종류 CRUD·사용 중 삭제 �
       )
     ).status,
   ).toBe(200);
-  const protectedCategory = sql(`select name from public.study_categories where id='${category}';`);
+  const protectedCategory = sql(
+    `select name from public.study_categories where id='${category}';`,
+  ).trim();
   const blocked = await adminHttp.deleteCategory(
     adminRequest({ expectedName: protectedCategory }, cookie, 'DELETE'),
     category,

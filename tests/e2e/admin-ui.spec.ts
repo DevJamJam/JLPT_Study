@@ -101,7 +101,7 @@ test('사용 중인 종류 삭제 실패는 행을 유지하고 오류를 보여
   await page.goto('/admin/categories');
   await page.getByRole('button', { name: '단어 삭제', exact: true }).click();
   await page.getByRole('button', { name: '종류 삭제', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('사용 중인 종류');
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('사용 중인 종류');
   await expect(page.locator('article')).toHaveCount(7);
   await width(page);
   await page.screenshot({ path: `test-results/${info.project.name}-admin-category-error.png` });
@@ -146,7 +146,7 @@ test('초기화 응답 실패 후 재시도는 같은 요청 ID를 사용하고 
     await page.getByRole('button', { name: '화면검증토끼 PIN 초기화', exact: true }).click();
     await page.getByRole('button', { name: '초기화', exact: true }).click();
     await expect.poll(() => state.resetCalls.length).toBe(n + 1);
-    await expect(page.getByRole('alert')).toContainText('연결을 확인');
+    await expect(page.getByRole('main').getByRole('alert')).toContainText('연결을 확인');
   }
   expect(state.resetCalls[0]).toEqual(state.resetCalls[1]);
   await expect(page.locator('article')).toHaveCount(15);
@@ -166,5 +166,5 @@ test('관리자 세션 만료는 로그인으로 이동하고 일반 ADMIN 가�
   await page.getByLabel('간편 비밀번호 확인', { exact: true }).fill('1234');
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: '공부방 시작하기' }).click();
-  await expect(page.getByRole('alert')).toContainText('관리자 전용');
+  await expect(page.getByRole('main').getByRole('alert')).toContainText('관리자 전용');
 });
