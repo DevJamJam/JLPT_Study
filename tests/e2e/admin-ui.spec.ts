@@ -75,14 +75,20 @@ test('관리자 로그인 화면과 공부 종류 관리의 추가·수정·삭�
   await page.goto('/admin/login');
   await expect(page.getByRole('textbox', { name: '관리자 아이디' })).toHaveValue('ADMIN');
   await width(page);
-  await page.screenshot({ path: `test-results/${info.project.name}-admin-login.png` });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-admin-login.png`,
+    animations: 'disabled',
+  });
   await page.getByLabel('관리자 비밀번호', { exact: true }).fill('ci-only-password');
   await page.getByRole('button', { name: '관리자 로그인', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/categories/);
   await expect(page.getByRole('heading', { name: '등록된 공부 종류' })).toBeVisible();
   await expect(page.locator('article')).toHaveCount(7);
   await width(page);
-  await page.screenshot({ path: `test-results/${info.project.name}-admin-categories.png` });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-admin-categories.png`,
+    animations: 'disabled',
+  });
   await page.getByRole('textbox', { name: '종류 이름' }).fill('작문');
   await page.getByRole('button', { name: '종류 추가', exact: true }).click();
   await expect(page.locator('article')).toHaveCount(8);
@@ -104,14 +110,20 @@ test('사용 중인 종류 삭제 실패는 행을 유지하고 오류를 보여
   await expect(page.getByRole('main').getByRole('alert')).toContainText('사용 중인 종류');
   await expect(page.locator('article')).toHaveCount(7);
   await width(page);
-  await page.screenshot({ path: `test-results/${info.project.name}-admin-category-error.png` });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-admin-category-error.png`,
+    animations: 'disabled',
+  });
 });
 test('회원15명·PIN 초기화·영구 삭제 확인과 취소를 검증한다', async ({ page }, info) => {
   const state = await setup(page);
   await page.goto('/admin/users');
   await expect(page.locator('article')).toHaveCount(15);
   await width(page);
-  await page.screenshot({ path: `test-results/${info.project.name}-admin-users.png` });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-admin-users.png`,
+    animations: 'disabled',
+  });
   await page.getByRole('button', { name: '화면검증토끼 내보내기', exact: true }).click();
   await expect(
     page.getByText('계정과 모든 공부 기록이 함께 삭제됩니다. 삭제 후에는 복구할 수 없습니다.', {
@@ -119,12 +131,18 @@ test('회원15명·PIN 초기화·영구 삭제 확인과 취소를 검증한다
     }),
   ).toBeVisible();
   await expect(page.getByRole('button', { name: '취소', exact: true })).toBeFocused();
-  await page.screenshot({ path: `test-results/${info.project.name}-admin-remove-confirm.png` });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-admin-remove-confirm.png`,
+    animations: 'disabled',
+  });
   await page.getByRole('button', { name: '취소', exact: true }).click();
   expect(state.removeCalls).toBe(0);
   await page.getByRole('button', { name: '화면검증토끼 PIN 초기화', exact: true }).click();
   await expect(page.getByRole('button', { name: '취소', exact: true })).toBeFocused();
-  await page.screenshot({ path: `test-results/${info.project.name}-admin-reset-confirm.png` });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-admin-reset-confirm.png`,
+    animations: 'disabled',
+  });
   await page.getByRole('button', { name: '초기화', exact: true }).click();
   await expect.poll(() => state.resetCalls.length).toBe(1);
   await expect(page.locator('article')).toHaveCount(15);
@@ -134,7 +152,10 @@ test('회원15명·PIN 초기화·영구 삭제 확인과 취소를 검증한다
   const last = page.locator('article').last();
   await last.scrollIntoViewIfNeeded();
   await expect(last.getByRole('button', { name: /내보내기/ })).toBeVisible();
-  await page.screenshot({ path: `test-results/${info.project.name}-admin-users-bottom.png` });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-admin-users-bottom.png`,
+    animations: 'disabled',
+  });
 });
 test('초기화 응답 실패 후 재시도는 같은 요청 ID를 사용하고 회원 행을 유지한다', async ({
   page,
