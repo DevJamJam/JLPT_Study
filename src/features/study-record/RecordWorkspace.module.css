@@ -134,3 +134,13 @@
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
+
+.listTitle {
+  margin: 24px 0 16px;
+  font-size: 18px;
+}
+.dateHeading {
+  margin: 24px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+}

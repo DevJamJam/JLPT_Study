@@ -51,6 +51,23 @@ async function setup(
     handlers.records ??
       ((route) => route.fulfill({ json: { data: { records: [base], nextCursor: null } } })),
   );
+  await page.route('**/api/me/dashboard?**', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          userId,
+          groupId,
+          month: new URL(route.request().url()).searchParams.get('month'),
+          totalMinutes: 0,
+          studyDays: 0,
+          recordCount: 0,
+          averageMinutes: 0,
+          longestMinutes: 0,
+          categories: [],
+        },
+      },
+    }),
+  );
   await page.goto('/me');
   await expect(page.getByRole('heading', { name: '내 기록', exact: true })).toBeVisible();
 }
