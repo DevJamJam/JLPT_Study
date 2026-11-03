@@ -587,7 +587,11 @@ test('기록 제목과 테두리 수정·삭제 버튼은 긴 종류명에서도
         json: {
           data: {
             records: [
-              { ...base, categoryName: '관리자가 추가한 아주 긴 공부종류' },
+              {
+                ...base,
+                categoryId: '88000000-0000-4000-8000-000000000003',
+                categoryName: '관리자가 추가한 아주 긴 공부종류',
+              },
               { ...base, id: '88000000-0000-4000-8000-000000000002', minutes: 40 },
             ],
             nextCursor: null,
@@ -595,6 +599,32 @@ test('기록 제목과 테두리 수정·삭제 버튼은 긴 종류명에서도
         },
       }),
   });
+  await page.route('**/api/me/dashboard?**', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          userId,
+          groupId,
+          month: '2026-10',
+          totalMinutes: 70,
+          studyDays: 1,
+          recordCount: 2,
+          averageMinutes: 70,
+          longestMinutes: 70,
+          categories: [
+            {
+              categoryId: '88000000-0000-4000-8000-000000000003',
+              name: '관리자가 추가한 아주 긴 공부종류',
+              minutes: 30,
+            },
+            { categoryId, name: '단어', minutes: 40 },
+          ],
+        },
+      },
+    }),
+  );
+  await page.getByRole('button', { name: '기록 새로고침', exact: true }).click();
+  await expect(page.getByRole('region', { name: '월간 공부 통계' })).toContainText('2개');
   const record = page.locator('article').first();
   await record.scrollIntoViewIfNeeded();
   const geometry = await record.evaluate((el) => {
