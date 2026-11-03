@@ -361,7 +361,7 @@ test('넓은 화면의 월간6주는 본문 안에 맞고 상하단과 폭이 �
   if (info.project.name === 'SE3') return;
   await setup(page);
   await expect(page.getByTestId('live-month-grid').locator('button')).toHaveCount(42);
-  await expect(day(page).getByText('🐰', { exact: true })).toBeVisible();
+  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
   const main = await separatedShell(page);
   await expect
     .poll(() => main.evaluate((element) => element.scrollHeight - element.clientHeight))
