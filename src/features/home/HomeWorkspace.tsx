@@ -202,7 +202,9 @@ function Home({ userId, groupId, emoji, nickname, ref }: Props) {
                 </p>
               </>
             ) : (
-              <p className={shared.empty}>아직 오늘 공부한 다른 멤버가 없어요.</p>
+              <p className={`${shared.empty} ${styles.emptyParticipants}`}>
+                아직 오늘 공부한 다른 멤버가 없어요.
+              </p>
             )}
           </>
         ) : (
