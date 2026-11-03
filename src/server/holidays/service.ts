@@ -28,6 +28,7 @@ export async function fetchHolidayYear(
   transport: typeof fetch = fetch,
 ): Promise<HolidayYear> {
   try {
+    const serviceKey = key?.trim();
     if (!/^\d{4}$/.test(year) || !serviceKey || serviceKey.length > 2048 || /\s/.test(serviceKey))
       throw new HolidayError();
     const holidays: Record<string, string[]> = {};
