@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Page, Locator } from '@playwright/test';
 import { seoulDateKey } from '../../src/lib/seoul-date';
 import { monday } from '../../src/features/calendar/dates';
 
@@ -47,4 +47,11 @@ export async function stubRecordReads(page: Page) {
   await page.route('**/api/categories', (route) =>
     route.fulfill({ json: { data: { categories: [] } } }),
   );
+}
+
+export async function expandRecordExtras(form: Locator) {
+  const details = form.locator('details');
+  if ((await details.getAttribute('open')) === null) {
+    await details.locator('summary').click();
+  }
 }

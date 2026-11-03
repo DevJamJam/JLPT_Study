@@ -1,3 +1,4 @@
+import { expandRecordExtras } from './record-fixture';
 import { captureShellScroll, separatedShell } from './layout-assertions';
 import { test, expect, type Page, type Route } from '@playwright/test';
 
@@ -76,7 +77,9 @@ async function fill(page: Page) {
   const form = page.getByRole('form', { name: '공부 기록 입력' });
   await form.getByRole('combobox', { name: '공부 종류', exact: true }).selectOption(categoryId);
   await form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }).fill('30');
+  await expandRecordExtras(form);
   await form.getByRole('textbox', { name: '시작 시각 (선택)', exact: true }).fill('09:00');
+  await expandRecordExtras(form);
   await form.getByRole('textbox', { name: '메모 (선택)', exact: true }).fill(base.memo);
   return form;
 }
@@ -188,6 +191,7 @@ test('종류 조회 실패 재시도·빈 목록 저장 차단·공부량 검증
   await expect(page.getByText('등록된 공부 종류가 없어요. 관리자에게 문의해주세요.')).toBeVisible();
   await page.getByRole('button', { name: '팝업 닫기' }).click();
   const form = await fill(page);
+  await expandRecordExtras(form);
   await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('5');
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();
   await expect(form.getByText('공부량과 단위를 함께 입력해 주세요.').first()).toBeVisible();
@@ -512,6 +516,7 @@ test('수정 세션 만료는 초안을 유지하고 다른 계정은 재전송�
   });
   await page.getByRole('button', { name: '수정', exact: true }).click();
   const form = page.getByRole('form', { name: '공부 기록 입력' });
+  await expandRecordExtras(form);
   await form
     .getByRole('textbox', { name: '메모 (선택)', exact: true })
     .fill('세션이 만료돼도 남아 있는 초안');
@@ -650,4 +655,58 @@ test('기록 제목과 테두리 수정·삭제 버튼은 긴 종류명에서도
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await separatedShell(page);
   await page.screenshot({ path: `test-results/${info.project.name}-records-actions-inline.png` });
+});
+
+test('추가 정보 접기·펼치기 유지와 숨겨진 오류 펼침, 필수 입력만 저장', async ({ page }, info) => {
+  let body: Record<string, unknown> | undefined;
+  await setup(page, {
+    records: async (route) => {
+      if (route.request().method() === 'POST') {
+        body = route.request().postDataJSON();
+        return route.fulfill({ status: 201, json: { data: { record: { ...base, ...body } } } });
+      }
+      return route.fulfill({ json: { data: { records: [], nextCursor: null } } });
+    },
+  });
+  await page.getByRole('button', { name: '공부 기록 남기기', exact: true }).click();
+  const form = page.getByRole('form', { name: '공부 기록 입력' });
+  const details = form.locator('details');
+  const toggle = details.locator('summary');
+  const memo = form.getByRole('textbox', { name: '메모 (선택)', exact: true });
+  await expect(memo).toBeHidden();
+  await expect(form.getByRole('textbox', { name: '시작 시각 (선택)', exact: true })).toBeHidden();
+  await expect(page.getByText('스터디원에게 공개됩니다.', { exact: true })).toHaveCount(0);
+  await expect(page.getByText(/기록은 스터디원과 함께 볼 수 있어요/)).toBeVisible();
+  await page.screenshot({ path: `test-results/${info.project.name}-record-extras-collapsed.png` });
+  await toggle.focus();
+  await page.keyboard.press('Enter');
+  await expect(memo).toBeVisible();
+  await expect(memo).toHaveAttribute('placeholder', '예: 오늘 외운 단어 20개, 어려웠던 문법');
+  await memo.fill('입력한 추가 정보는 접어도 유지해요.');
+  await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('5');
+  await toggle.click();
+  await expect(memo).toBeHidden();
+  await toggle.click();
+  await expect(memo).toHaveValue('입력한 추가 정보는 접어도 유지해요.');
+  await form.getByRole('combobox', { name: '공부 종류', exact: true }).selectOption(categoryId);
+  await form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }).fill('30');
+  await toggle.click();
+  await form.getByRole('button', { name: '기록 저장', exact: true }).click();
+  await expect(form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true })).toBeFocused();
+  await expect(form.getByText('공부량과 단위를 함께 입력해 주세요.').first()).toBeVisible();
+  await form.getByRole('combobox', { name: '단위', exact: true }).selectOption('item');
+  await page.screenshot({ path: `test-results/${info.project.name}-record-extras-expanded.png` });
+  await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('');
+  await form.getByRole('combobox', { name: '단위', exact: true }).selectOption('');
+  await memo.fill('');
+  await toggle.click();
+  await form.getByRole('button', { name: '기록 저장', exact: true }).click();
+  await expect(form).toHaveCount(0);
+  expect(body).toMatchObject({
+    minutes: 30,
+    startTime: null,
+    quantity: null,
+    quantityUnit: null,
+    memo: null,
+  });
 });
