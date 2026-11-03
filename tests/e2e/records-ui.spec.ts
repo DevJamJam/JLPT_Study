@@ -507,3 +507,27 @@ test('수정 세션 만료는 초안을 유지하고 다른 계정은 재전송�
   await expect(form.getByRole('button', { name: '수정 저장', exact: true })).toBeDisabled();
   expect(calls).toBe(2);
 });
+
+test('내 기록 빈 화면도 공통 콘텐츠 폭과 상단 여백을 따른다', async ({ page }, info) => {
+  await setup(page, {
+    records: (route) => route.fulfill({ json: { data: { records: [], nextCursor: null } } }),
+  });
+  await expect(page.getByText('아직 이달에 남긴 기록이 없어요.')).toBeVisible();
+  await separatedShell(page);
+  const geometry = await page.getByTestId('study-shell').evaluate((shell) => {
+    const region = shell
+      .querySelector('[aria-labelledby="records-title"]')!
+      .getBoundingClientRect();
+    const header = shell.querySelector(':scope > header > div')!.getBoundingClientRect();
+    const main = shell.querySelector('main')!.getBoundingClientRect();
+    return {
+      left: Math.abs(region.left - header.left),
+      right: Math.abs(region.right - header.right),
+      top: region.top - main.top,
+    };
+  });
+  expect(geometry.left).toBeLessThanOrEqual(1);
+  expect(geometry.right).toBeLessThanOrEqual(1);
+  expect(geometry.top).toBe(24);
+  await page.screenshot({ path: `test-results/${info.project.name}-records-aligned-empty.png` });
+});
