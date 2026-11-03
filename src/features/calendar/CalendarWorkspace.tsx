@@ -4,6 +4,7 @@ import { useEffect, useImperativeHandle, useRef, useState, type Ref } from 'reac
 import { useSearchParams } from 'next/navigation';
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/Button';
+import { FiRefreshCw } from 'react-icons/fi';
 import { PeriodPicker } from '@/components/ui/PeriodPicker';
 import { seoulDateKey } from '@/lib/seoul-date';
 import { toast } from '@/lib/notifications';
@@ -185,7 +186,10 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
     member.id === userId ? { ...member, emoji, nickname } : member,
   );
   return (
-    <section className={extra.workspace} aria-label="공부 달력">
+    <section
+      className={`${extra.workspace} ${route.view !== 'week' ? extra.monthly : ''}`}
+      aria-label="공부 달력"
+    >
       <div className={styles.rings} aria-hidden="true">
         {Array.from({ length: 8 }, (_, index) => (
           <span key={index} />
@@ -257,16 +261,22 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
         <div className={extra.refresh}>
           <Button
             variant="quiet"
+            className={extra.refreshButton}
+            aria-label="달력 새로고침"
+            title="달력 새로고침"
+            aria-busy={active.isFetching || members.isFetching}
             disabled={active.isFetching || members.isFetching}
             onClick={() => {
               void active.refetch();
               void members.refetch();
             }}
           >
-            달력 새로고침
+            <FiRefreshCw aria-hidden="true" />
           </Button>
           {(active.isFetching || members.isFetching) && (
-            <span role="status">기록을 확인하고 있어요…</span>
+            <span className={styles.srOnly} role="status">
+              기록을 확인하고 있어요…
+            </span>
           )}
         </div>
       </div>
@@ -363,7 +373,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
           </div>
         </section>
       ) : (
-        <div className={styles.calendar}>
+        <div className={`${styles.calendar} ${extra.monthCalendar}`}>
           <div className={styles.weekdayLabels}>
             {weekdays.map((day, index) => (
               <span
@@ -374,7 +384,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
               </span>
             ))}
           </div>
-          <div className={styles.monthGrid} data-testid="live-month-grid">
+          <div className={`${styles.monthGrid} ${extra.monthGrid}`} data-testid="live-month-grid">
             {dates.map((date) => {
               const day = ready ? calendar.data?.days.find((day) => day.date === date) : undefined;
               const people = day?.participants ?? [];

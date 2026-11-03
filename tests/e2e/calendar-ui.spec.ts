@@ -379,6 +379,19 @@ test('넓은 화면의 월간6주는 본문 안에 맞고 상하단과 폭이 �
   });
   for (const distance of bounds) expect(distance).toBeLessThanOrEqual(1);
   await page.screenshot({ path: `test-results/${info.project.name}-calendar-fit.png` });
+  const original = page.viewportSize()!;
+  await page.setViewportSize({ width: original.width, height: 1266 });
+  await expect
+    .poll(() => main.evaluate((element) => element.scrollHeight - element.clientHeight))
+    .toBeLessThanOrEqual(1);
+  const last = await page.getByTestId('live-month-grid').locator('button').last().boundingBox();
+  const visible = await main.boundingBox();
+  expect(visible!.y + visible!.height - last!.y - last!.height).toBeLessThanOrEqual(20);
+  const refresh = page.getByRole('button', { name: '달력 새로고침', exact: true });
+  await expect(refresh.locator('svg')).toHaveCount(1);
+  await expect(refresh).toHaveText('');
+  await page.screenshot({ path: `test-results/${info.project.name}-calendar-tall.png` });
+  await page.setViewportSize(original);
   const monthColor = await page
     .getByTestId('study-shell')
     .evaluate((node) => getComputedStyle(node).backgroundColor);
