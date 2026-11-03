@@ -1,4 +1,5 @@
 .shell {
+  --study-content-width: 960px;
   height: var(--study-shell-height, 100dvh);
   display: grid;
   grid-template-rows: 64px minmax(0, 1fr) auto;
@@ -23,7 +24,7 @@
 }
 .headerInner {
   height: 100%;
-  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), 960px);
+  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), var(--study-content-width));
   padding: 0;
   margin: auto;
   display: flex;
@@ -64,7 +65,7 @@
   scrollbar-color: var(--primary-strong) var(--border);
 }
 .contentInner {
-  width: min(calc(100% - 32px), 960px);
+  width: min(calc(100% - 32px), var(--study-content-width));
   margin: 0 auto;
 }
 .month .content,
@@ -76,7 +77,7 @@
   background: var(--surface);
 }
 .scrollGuide {
-  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), 960px);
+  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), var(--study-content-width));
   margin: 0 auto;
   padding: 0 12px;
   display: flex;
@@ -136,7 +137,7 @@
   position: relative;
   /* Keep the raised + icon below the scroll controls as well as the main. */
   margin: 12px auto 0;
-  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), 960px);
+  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), var(--study-content-width));
   min-height: 74px;
   padding: 8px 8px max(8px, env(safe-area-inset-bottom));
   display: grid;
@@ -196,5 +197,18 @@
     min-height: 100%;
     display: flex;
     flex-direction: column;
+  }
+}
+
+@media (min-width: 1100px) {
+  .week .contentInner {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+}
+@media (min-width: 1280px) {
+  .shell {
+    --study-content-width: 1200px;
   }
 }
