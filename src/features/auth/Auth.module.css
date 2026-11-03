@@ -135,6 +135,7 @@
   accent-color: var(--primary-strong);
 }
 .error {
+  word-break: keep-all;
   color: var(--danger);
   font-size: 14px;
   overflow-wrap: anywhere;
