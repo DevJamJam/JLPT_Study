@@ -13,6 +13,7 @@ import { RecordAction } from '../study-record/RecordAction';
 import type { StudyRecord } from '../study-record/types';
 import { CalendarDetail } from './CalendarDetail';
 import { CalendarParticipants } from './CalendarParticipants';
+import { useHolidays } from './useHolidays';
 import { calendarRoute, duration, monday, shiftDate } from './dates';
 import {
   calendarRequest,
@@ -55,6 +56,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
   const [notice, setNotice] = useState({ id: 0, message: '' });
   const client = useQueryClient();
   const scope = route.view === 'group' ? 'group' : 'mine';
+  const holidays = useHolidays(route.dates[0], route.dates[route.dates.length - 1]);
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState !== 'hidden') setToday(seoulDateKey());
@@ -179,10 +181,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
     route.view === 'week'
       ? `${route.week.slice(5).replace('-', '/')} – ${route.dates[6].slice(5).replace('-', '/')}`
       : `${route.month.slice(0, 4)}년 ${Number(route.month.slice(5))}월`;
-  const dateClass = (date: string) => {
-    const day = new Date(`${date}T00:00:00Z`).getUTCDay();
-    return day === 0 ? styles.holiday : day === 6 ? styles.saturday : '';
-  };
+  const dateClass = (date: string) => styles[holidays.tone(date)] ?? '';
   const memberList = (members.data?.members ?? []).map((member) =>
     member.id === userId ? { ...member, emoji, nickname } : member,
   );
@@ -256,19 +255,27 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
         />
       </div>
       <div className={extra.statusBar}>
-        <p className={extra.notice}>
-          공휴일 정보는 아직 확인할 수 없어요. 현재는 토요일과 일요일만 색상으로 구분해요.
-        </p>
+        <div className={extra.holidayStatus} aria-live="polite">
+          {holidays.pending && <span>공휴일 확인 중…</span>}
+          {(holidays.failed || holidays.stale) && (
+            <span>
+              {holidays.failed
+                ? '공휴일을 다시 확인해주세요.'
+                : '최근 확인한 공휴일을 표시하고 있어요.'}
+            </span>
+          )}
+        </div>
         <div className={extra.refresh}>
           <Button
             variant="icon"
             aria-label="달력 새로고침"
             title="달력 새로고침"
-            aria-busy={active.isFetching || members.isFetching}
-            disabled={active.isFetching || members.isFetching}
+            aria-busy={active.isFetching || members.isFetching || holidays.fetching}
+            disabled={active.isFetching || members.isFetching || holidays.fetching}
             onClick={() => {
               void active.refetch();
               void members.refetch();
+              void holidays.refresh();
             }}
           >
             <FiRefreshCw aria-hidden="true" />
@@ -323,6 +330,11 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
                     <strong className={dateClass(date)}>
                       {weekdays[index]} · {date.slice(5).replace('-', '/')}
                     </strong>
+                    {holidays.names(date).length > 0 && (
+                      <small className={extra.holidayName}>
+                        {holidays.names(date).join(' · ')}
+                      </small>
+                    )}
                     {ready && (
                       <span>
                         {duration(records.reduce((sum, record) => sum + record.minutes, 0))}
@@ -394,7 +406,8 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
                   key={date}
                   data-date={date}
                   disabled={!ready || date < '2000-01-01'}
-                  aria-label={`${date} 공부 기록 보기`}
+                  aria-label={`${date}${holidays.names(date).length ? ` ${holidays.names(date).join(' · ')}` : ''} 공부 기록 보기`}
+                  title={holidays.names(date).join(' · ') || undefined}
                   aria-current={date === today ? 'date' : undefined}
                   className={`${styles.day} ${!date.startsWith(route.month) ? styles.faded : ''} ${date === route.date ? extra.selected : ''}`}
                   onClick={() => openDate(date)}
@@ -404,6 +417,9 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
                   >
                     {Number(date.slice(-2))}
                   </span>
+                  {holidays.names(date).length > 0 && (
+                    <span className={extra.holidayName}>{holidays.names(date).join(' · ')}</span>
+                  )}
                   {route.view === 'group' ? (
                     <CalendarParticipants
                       members={people.map((person) => {

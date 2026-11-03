@@ -62,6 +62,28 @@ async function setup(page: Page, url = '/calendar', crowded: boolean | number = 
       },
     }),
   );
+  await page.route('**/api/holidays?**', (route) => {
+    const year = new URL(route.request().url()).searchParams.get('year')!;
+    const known = {
+      '2026-10-03': ['개천절'],
+      '2026-10-05': ['대체공휴일'],
+      '2026-10-09': ['한글날'],
+      '2026-01-01': ['1월1일'],
+      '2025-12-25': ['기독탄신일'],
+    };
+    return route.fulfill({
+      json: {
+        data: {
+          year,
+          holidays: Object.fromEntries(
+            Object.entries(known).filter(([date]) => date.startsWith(year)),
+          ),
+          fetchedAt: '2026-10-29T03:00:00Z',
+          source: 'kasi',
+        },
+      },
+    });
+  });
   await page.route('**/api/members', (route) => route.fulfill({ json: { data: { members } } }));
   await page.route('**/api/categories', (route) =>
     route.fulfill({ json: { data: { categories: [{ id: categoryId, name: '단어' }] } } }),
@@ -465,4 +487,65 @@ test('참여자5명 경계와 화살표·새로고침의 공통 크기·중앙 �
   await page.screenshot({
     path: `test-results/${info.project.name}-calendar-controls-matched.png`,
   });
+});
+
+test('공휴일은 토요일보다 우선하고 대체공휴일·주간·상세와 원천 실패를 구분한다', async ({
+  page,
+}, info) => {
+  await setup(page);
+  const holiday = page.locator('[data-date="2026-10-03"]');
+  await expect(holiday).toHaveAttribute('title', '개천절');
+  const color = (date: string) =>
+    page
+      .locator(`[data-date="${date}"] > span`)
+      .first()
+      .evaluate((element) => getComputedStyle(element).color);
+  expect(await color('2026-10-03')).toBe('rgb(182, 60, 85)');
+  expect(await color('2026-10-10')).toBe('rgb(53, 99, 166)');
+  expect(await color('2026-10-05')).toBe('rgb(182, 60, 85)');
+  await expect(
+    page.getByText('공휴일 정보는 아직 확인할 수 없어요.', { exact: false }),
+  ).toHaveCount(0);
+  await holiday.click();
+  const dialog = page.getByRole('dialog', { name: '2026-10-03 공부 기록', exact: true });
+  await expect(dialog.getByLabel('공휴일', { exact: true })).toHaveText('개천절');
+  await page.getByRole('button', { name: '팝업 닫기' }).click();
+  await page.getByRole('button', { name: '내 주간', exact: true }).click();
+  await page.getByRole('button', { name: '이전 주' }).click();
+  await page.getByRole('button', { name: '이전 주' }).click();
+  await page.getByRole('button', { name: '이전 주' }).click();
+  await expect(page.locator('[data-week-date="2026-10-05"]')).toContainText('대체공휴일');
+  await page.screenshot({ path: `test-results/${info.project.name}-holidays-week.png` });
+  await page.getByRole('button', { name: '그룹 월간', exact: true }).click();
+  await page.getByRole('button', { name: '달력 새로고침', exact: true }).scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `test-results/${info.project.name}-holidays-month.png` });
+  await page.route('**/api/holidays?**', (route) =>
+    route.fulfill({ status: 503, json: { error: { code: 'HOLIDAYS_UNAVAILABLE' } } }),
+  );
+  await page.getByRole('button', { name: '달력 새로고침', exact: true }).click();
+  await expect(page.getByText('공휴일을 다시 확인해주세요.', { exact: true })).toBeVisible();
+  // 이전 성공 정보와 공부 기록은 별도로 유지한다.
+  await expect(holiday).toHaveAttribute('title', '개천절');
+  await expect(day(page)).toBeEnabled();
+});
+
+test('연말 그리드는 두 연도의 공휴일을 읽고 최초 원천 실패를 빈 정상 정보로 표시하지 않는다', async ({
+  page,
+}) => {
+  await setup(page, '/calendar?month=2025-12');
+  await expect(page.locator('[data-date="2025-12-25"]')).toHaveAttribute('title', '기독탄신일');
+  await expect(page.locator('[data-date="2026-01-01"]')).toHaveAttribute('title', '1월1일');
+  const years = [] as string[];
+  page.on('request', (request) => {
+    if (request.url().includes('/api/holidays?'))
+      years.push(new URL(request.url()).searchParams.get('year')!);
+  });
+  await page.reload();
+  await expect.poll(() => years.sort()).toEqual(['2025', '2026']);
+  await page.route('**/api/holidays?**', (route) =>
+    route.fulfill({ status: 503, json: { error: { code: 'HOLIDAYS_UNAVAILABLE' } } }),
+  );
+  await page.reload();
+  await expect(page.getByText('공휴일을 다시 확인해주세요.', { exact: true })).toBeVisible();
+  await expect(page.getByTestId('live-month-grid').locator('button')).toHaveCount(42);
 });

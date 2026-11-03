@@ -104,3 +104,19 @@
     grid-auto-rows: auto;
   }
 }
+
+.holidayStatus {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.holidayName {
+  color: var(--date-holiday);
+  font-size: 10px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+small.holidayName {
+  line-height: 24px;
+}
