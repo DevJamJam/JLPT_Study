@@ -15,6 +15,7 @@ import { StudyWorkspace } from '../study/StudyWorkspace';
 import type { AddRecordHandle } from '../calendar/navigation';
 import { useSearchParams } from 'next/navigation';
 import { RecordWorkspace } from '../study-record/RecordWorkspace';
+import { HomeWorkspace } from '../home/HomeWorkspace';
 
 export function SessionHome({ initialView = 'home' }: { initialView?: MainView }) {
   const params = useSearchParams();
@@ -64,7 +65,7 @@ export function SessionHome({ initialView = 'home' }: { initialView?: MainView }
   const normal = !!session && !session.profile.mustChangePin;
   const body = (
     <>
-      {(!normal || initialView === 'home') && (
+      {!normal && (
         <section className={styles.card} aria-labelledby="welcome-title">
           {session ? (
             <>
@@ -116,6 +117,15 @@ export function SessionHome({ initialView = 'home' }: { initialView?: MainView }
         session &&
         (initialView === 'calendar' ? (
           <CalendarWorkspace
+            ref={workspace}
+            key={`${session.profile.id}:${session.group.id}`}
+            userId={session.profile.id}
+            groupId={session.group.id}
+            emoji={session.profile.emoji}
+            nickname={session.profile.nickname}
+          />
+        ) : initialView === 'home' ? (
+          <HomeWorkspace
             ref={workspace}
             key={`${session.profile.id}:${session.group.id}`}
             userId={session.profile.id}

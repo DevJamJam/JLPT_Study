@@ -1,0 +1,90 @@
+.home {
+  max-width: 960px;
+  margin: auto;
+}
+.participants {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+.participant {
+  min-width: 0;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.participant > span:first-child {
+  flex: 0 0 auto;
+  font-size: 28px;
+}
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+.sectionHeading h2 {
+  font-size: 18px;
+  margin: 0;
+}
+.recordButton {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding: 14px 0;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.recordButton:last-child {
+  border-bottom: 0;
+}
+.recordButton time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.recordCopy {
+  min-width: 0;
+  flex: 1 1 190px;
+}
+.recordCopy strong,
+.memo {
+  display: block;
+}
+.memo {
+  margin-top: 6px;
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+.recordButton:focus-visible {
+  outline: 2px solid var(--primary-strong);
+  outline-offset: 3px;
+}
+.status {
+  padding: 16px 0;
+  color: var(--muted);
+}
+.error {
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--danger-soft);
+  color: var(--danger);
+}

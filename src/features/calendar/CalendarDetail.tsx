@@ -27,7 +27,7 @@ export function CalendarDetail({
   today: string;
   userId: string;
   groupId: string;
-  members: StudyMember[];
+  members: Pick<StudyMember, 'id' | 'nickname' | 'emoji'>[];
   onClose: () => void;
   onNew: () => void;
   onEdit: (record: StudyRecord) => void;

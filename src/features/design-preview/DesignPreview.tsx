@@ -2,6 +2,7 @@
 
 import { useState, useRef, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
+import { Metric } from '@/components/ui/Metric';
 import { PeriodPicker } from '@/components/ui/PeriodPicker';
 import { StudyDialog } from '@/components/ui/StudyDialog';
 import { StudyShell, type MainView } from '@/components/layout/StudyShell';
@@ -541,23 +542,6 @@ export function DesignPreview() {
           )}
         </StudyDialog>
       )}
-    </div>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  tone = '',
-}: {
-  label: string;
-  value: string;
-  tone?: '' | 'pink' | 'lilac';
-}) {
-  return (
-    <div className={`${styles.metric} ${tone ? styles[tone] : ''}`}>
-      <span>{label}</span>
-      <strong>{value}</strong>
     </div>
   );
 }

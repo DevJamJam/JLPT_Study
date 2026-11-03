@@ -72,6 +72,7 @@ test('로그인 오류 입력 유지·중복 제출 차단·세션 확인·로�
   await page.getByRole('button', { name: '로그인', exact: true }).click();
   await expect(page.getByRole('heading', { name: '화면검증님, 반가워요' })).toBeVisible();
   expect(await page.evaluate(() => localStorage.length)).toBe(0);
+  await page.getByRole('button', { name: '내 설정 열기', exact: true }).click();
   await page.getByRole('button', { name: '로그아웃', exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
