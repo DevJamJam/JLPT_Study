@@ -187,7 +187,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
   );
   return (
     <section
-      className={`${extra.workspace} ${route.view !== 'week' ? extra.monthly : ''}`}
+      className={`${extra.workspace} ${route.view !== 'week' ? extra.monthly : extra.weekly}`}
       aria-label="공부 달력"
     >
       <div className={styles.rings} aria-hidden="true">
@@ -307,7 +307,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
         </div>
       )}
       {route.view === 'week' ? (
-        <section className={styles.paper} aria-label="내 주간 공부 기록">
+        <section className={`${styles.paper} ${extra.weekPaper}`} aria-label="내 주간 공부 기록">
           <span className={styles.tape} aria-hidden="true" />
           <div className={styles.weekSummary}>
             <span>
@@ -319,29 +319,34 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
               </strong>
             )}
           </div>
-          <div className={styles.weekGrid} data-testid="week-grid">
+          <div className={`${styles.weekGrid} ${extra.weekGrid}`} data-testid="week-grid">
             {dates.map((date, index) => {
               const records = ready
                 ? dayRecords((weekly.data ?? []).filter((record) => record.studyDate === date))
                 : [];
               return (
-                <article className={styles.weekDay} data-week-date={date} key={date}>
+                <article
+                  className={`${styles.weekDay} ${extra.weekDay}`}
+                  data-week-date={date}
+                  key={date}
+                >
                   <header>
                     <strong className={dateClass(date)}>
                       {weekdays[index]} · {date.slice(5).replace('-', '/')}
                     </strong>
-                    {holidays.names(date).length > 0 && (
-                      <small className={extra.holidayName}>
-                        {holidays.names(date).join(' · ')}
-                      </small>
-                    )}
-                    {ready && (
-                      <span>
-                        {duration(records.reduce((sum, record) => sum + record.minutes, 0))}
-                      </span>
-                    )}
+                    <small
+                      className={extra.holidayName}
+                      aria-hidden={holidays.names(date).length === 0}
+                    >
+                      {holidays.names(date).join(' · ')}
+                    </small>
+                    <span data-week-total>
+                      {ready
+                        ? duration(records.reduce((sum, record) => sum + record.minutes, 0))
+                        : ''}
+                    </span>
                   </header>
-                  <div className={styles.weekRecords}>
+                  <div className={styles.weekRecords} data-week-records>
                     {ready ? (
                       records.length ? (
                         records.map((record) => (

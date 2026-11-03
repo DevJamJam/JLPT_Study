@@ -112,11 +112,72 @@
 }
 .holidayName {
   color: var(--date-holiday);
-  font-size: 10px;
+  font-size: 12px;
+  font-weight: 700;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
 small.holidayName {
   line-height: 24px;
+}
+
+.weekGrid .weekDay header > small {
+  min-height: 24px;
+}
+@media (min-width: 768px) {
+  .weekGrid {
+    grid-auto-rows: minmax(24px, auto) minmax(24px, auto) minmax(24px, auto) minmax(160px, auto)
+      minmax(48px, auto);
+  }
+  .weekGrid .weekDay {
+    display: grid;
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+  }
+  .weekGrid .weekDay header {
+    grid-row: span 3;
+    grid-template-rows: subgrid;
+  }
+}
+@media (min-width: 1100px) {
+  .weekly {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .weekly > * {
+    flex-shrink: 0;
+  }
+  .weekPaper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .weekGrid {
+    flex: 1;
+    grid-template-rows:
+      minmax(24px, auto) minmax(24px, auto) minmax(24px, auto) minmax(160px, 1fr)
+      minmax(48px, auto);
+  }
+  .weekGrid .weekDay header,
+  .weekGrid .weekDay [data-week-records] > p,
+  .weekGrid .weekDay [data-week-records] strong,
+  .weekGrid .weekDay [data-week-records] span,
+  .weekGrid .weekDay [data-week-records] p,
+  .weekGrid .weekDay button {
+    font-size: 14px;
+  }
+}
+
+.statusBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.statusBar .refresh {
+  flex-shrink: 0;
+  margin: 0 0 0 auto;
 }

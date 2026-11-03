@@ -66,7 +66,7 @@ async function setup(page: Page, url = '/calendar', crowded: boolean | number = 
     const year = new URL(route.request().url()).searchParams.get('year')!;
     const known = {
       '2026-10-03': ['개천절'],
-      '2026-10-05': ['대체공휴일'],
+      '2026-10-05': ['대체공휴일(개천절)'],
       '2026-10-09': ['한글날'],
       '2026-01-01': ['1월1일'],
       '2025-12-25': ['기독탄신일'],
@@ -213,7 +213,9 @@ test('월간42칸·15명 축약·개인 보기·공통 메뉴를 실제 데이�
     element.scrollTop = 0;
   });
   await separatedShell(page);
-  await expect(day(page).getByText('+10', { exact: true })).toBeVisible();
+  await expect(
+    day(page).getByText(info.project.name === 'SE3' ? '15명' : '+10', { exact: true }),
+  ).toBeVisible();
   await expect(day(page).locator('[data-member-id]')).toHaveCount(5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({
@@ -356,21 +358,26 @@ test('주간 날짜·빈 날 추가·기간 이동과 하단 오늘 추가를 �
   await expect(form).toHaveCount(0);
 });
 
-test('갱신 실패는 이전 기록 유지, 세션 만료는 이전 기록 숨김', async ({ page }) => {
+test('갱신 실패는 이전 기록 유지, 세션 만료는 이전 기록 숨김', async ({ page }, info) => {
   const { state } = await setup(page);
-  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
+  const retained =
+    info.project.name === 'SE3'
+      ? day(page).getByText('2명', { exact: true })
+      : day(page).locator('[title="공부하는 토끼"]');
+  await expect(retained).toBeVisible();
   state.calendarStatus = 503;
   await page.getByRole('button', { name: '달력 새로고침' }).click();
   await expect(page.getByRole('region', { name: '공부 달력' }).getByRole('alert')).toContainText(
     '달력을 불러오지 못했어요',
   );
-  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
+  await expect(retained).toBeVisible();
   state.calendarStatus = 401;
   await page.getByRole('button', { name: '달력 다시 불러오기' }).click();
   await expect(page.getByRole('region', { name: '공부 달력' }).getByRole('alert')).toContainText(
     '세션을 다시 확인',
   );
   await expect(day(page)).toBeDisabled();
+  await expect(retained).toHaveCount(0);
   await expect(day(page).locator('[title="공부하는 토끼"]')).toHaveCount(0);
 });
 
@@ -439,9 +446,12 @@ test('참여자5명 경계와 화살표·새로고침의 공통 크기·중앙 �
     await setup(page, '/calendar', count);
     const participants = day(page).getByTestId('calendar-participants');
     await expect(participants.locator('[data-member-id]')).toHaveCount(5);
-    if (count > 5)
+    if (info.project.name === 'SE3') {
+      await expect(participants.getByText(`${count}명`, { exact: true })).toBeVisible();
+      await expect(participants.locator('[data-member-id]:visible')).toHaveCount(0);
+    } else if (count > 5) {
       await expect(participants.getByText(`+${count - 5}`, { exact: true })).toBeVisible();
-    else await expect(participants.getByText(/^\+\d+$/)).toHaveCount(0);
+    } else await expect(participants.getByText(/^\+\d+$/)).toHaveCount(0);
     await day(page).scrollIntoViewIfNeeded();
     await page.screenshot({
       path: `test-results/${info.project.name}-calendar-members-${count}.png`,
@@ -475,6 +485,11 @@ test('참여자5명 경계와 화살표·새로고침의 공통 크기·중앙 �
   }
   expect(appearances[1]).toEqual(appearances[0]);
   expect(appearances[2]).toEqual(appearances[0]);
+  const next = await page.getByRole('button', { name: '다음 달', exact: true }).boundingBox();
+  const refresh = await page
+    .getByRole('button', { name: '달력 새로고침', exact: true })
+    .boundingBox();
+  expect(Math.abs(next!.x + next!.width - refresh!.x - refresh!.width)).toBeLessThanOrEqual(1);
   expect(appearances[0]).toMatchObject({
     width: 44,
     height: 44,
@@ -515,7 +530,40 @@ test('공휴일은 토요일보다 우선하고 대체공휴일·주간·상세�
   await page.getByRole('button', { name: '이전 주' }).click();
   await page.getByRole('button', { name: '이전 주' }).click();
   await expect(page.locator('[data-week-date="2026-10-05"]')).toContainText('대체공휴일');
+  await expect(page.locator('[data-week-total]').first()).toHaveText('0분');
+  if (info.project.name !== 'SE3') {
+    const positions = await page.locator('[data-week-date]').evaluateAll((days) =>
+      days.map((day) => ({
+        total: day.querySelector('[data-week-total]')!.getBoundingClientRect().top,
+        records: day.querySelector('[data-week-records]')!.getBoundingClientRect().top,
+        action: day.querySelector('button')!.getBoundingClientRect().top,
+      })),
+    );
+    const columns = info.project.name === 'pad' ? 2 : 7;
+    for (let start = 0; start < 7; start += columns) {
+      const row = positions.slice(start, start + columns);
+      for (const field of ['total', 'records', 'action'] as const)
+        expect(
+          Math.max(...row.map((item) => item[field])) - Math.min(...row.map((item) => item[field])),
+        ).toBeLessThanOrEqual(1);
+    }
+  }
   await page.screenshot({ path: `test-results/${info.project.name}-holidays-week.png` });
+  if (info.project.name === 'desktop') {
+    const original = page.viewportSize()!;
+    await page.setViewportSize({ width: 1440, height: 1266 });
+    const main = await separatedShell(page);
+    await expect
+      .poll(() => main.evaluate((node) => node.scrollHeight - node.clientHeight))
+      .toBeLessThanOrEqual(1);
+    const paper = await page.getByRole('region', { name: '내 주간 공부 기록' }).boundingBox();
+    const area = await main.boundingBox();
+    expect(paper!.width).toBeGreaterThan(1100);
+    expect(paper!.height).toBeGreaterThan(700);
+    expect(area!.y + area!.height - paper!.y - paper!.height).toBeLessThanOrEqual(24);
+    await page.screenshot({ path: 'test-results/desktop-holidays-week-large.png' });
+    await page.setViewportSize(original);
+  }
   await page.getByRole('button', { name: '그룹 월간', exact: true }).click();
   await page.getByRole('button', { name: '달력 새로고침', exact: true }).scrollIntoViewIfNeeded();
   await page.screenshot({ path: `test-results/${info.project.name}-holidays-month.png` });

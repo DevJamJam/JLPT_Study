@@ -7,6 +7,7 @@ export function CalendarParticipants({ members }: { members: readonly Member[] }
   const remaining = Math.max(0, members.length - visibleLimit);
   return (
     <div className={styles.faces} data-testid="calendar-participants">
+      {members.length > 0 && <span className={styles.memberCount}>{members.length}명</span>}
       {members.slice(0, visibleLimit).map((member) => (
         <span
           className={styles.face}

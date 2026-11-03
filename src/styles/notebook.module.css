@@ -307,7 +307,7 @@
   text-align: left;
 }
 .standard {
-  max-width: 960px;
+  max-width: var(--study-content-width, 960px);
   margin: auto;
 }
 .standard h1 {
@@ -706,4 +706,27 @@
   height: 100dvh;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+}
+
+.memberCount {
+  display: none;
+}
+@media (max-width: 767px) {
+  .faces > .face,
+  .faces > .extra {
+    display: none;
+  }
+  .faces > .memberCount {
+    display: block;
+    grid-column: 1 / -1;
+    width: 100%;
+    padding: 2px 0;
+    border-radius: 6px;
+    background: var(--primary-soft);
+    color: var(--primary-strong);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 20px;
+    text-align: center;
+  }
 }
