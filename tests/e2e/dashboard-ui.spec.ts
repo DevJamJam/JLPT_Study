@@ -128,7 +128,7 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await expect(stats(page)).toContainText('2일');
   await expect(stats(page)).toContainText('8시간 30분');
   await expect(stats(page)).toContainText('15시간 30분');
-  expect(await page.locator('article').count()).toBe(30);
+  await expect(page.locator('article')).toHaveCount(30);
   await captureTop(page, `test-results/${info.project.name}-dashboard-populated.png`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await stats(page)
@@ -186,7 +186,9 @@ test('통계 갱신 실패는 이전 값 유지, 월 이동은 이전 값 숨김
   const state = await setup(page, [{ ...base }]);
   state.status = 503;
   await page.getByRole('button', { name: '기록 새로고침', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('불러오지 못했어요');
+  await expect(
+    page.getByRole('region', { name: '내 기록', exact: true }).getByRole('alert'),
+  ).toContainText('불러오지 못했어요');
   await expect(stats(page)).toContainText('1개');
   await page.getByRole('button', { name: '이전 달', exact: true }).click();
   await expect(stats(page)).toHaveCount(0);

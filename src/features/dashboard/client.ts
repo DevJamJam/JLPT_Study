@@ -10,7 +10,7 @@ export async function dashboardRequest(
   const data = await jsonRequest<MonthSummary>(
     `/api/me/dashboard?${new URLSearchParams({ month })}`,
     undefined,
-    signal,
+    signal ? AbortSignal.any([signal, AbortSignal.timeout(15000)]) : AbortSignal.timeout(15000),
   );
   if (!data || data.userId !== userId || data.groupId !== groupId)
     throw new AuthClientError(409, 'ACCOUNT_CHANGED');

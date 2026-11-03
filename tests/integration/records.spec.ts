@@ -452,6 +452,9 @@ test('월 대시보드는 실제 PostgREST 상한100건보다 많은 기록도 �
     insert into public.study_records(id,group_id,user_id,study_date,minutes,category_id,create_fingerprint)
       select ('84000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${group}','${user}','2024-02-29',1,'${category}',repeat('a',64)
       from generate_series(1,107) n;
+    insert into public.study_records(id,group_id,user_id,study_date,minutes,category_id,create_fingerprint) values
+      ('84000000-0000-4000-8000-000000000901','${group}','${peer}','2024-02-29',200,'${category}',repeat('a',64)),
+      ('84000000-0000-4000-8000-000000000902','${otherGroup}','${outsider}','2024-02-29',300,'${category}',repeat('a',64));
     insert into public.sessions(token_hash,user_id,credential_version,expires_at,mode)
       values ('${tokenHash}','${user}',(select credential_version from public.user_credentials where user_id='${user}'),now()+interval '1 hour','normal')
       on conflict(token_hash) do update set expires_at=excluded.expires_at,credential_version=excluded.credential_version;
