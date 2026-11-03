@@ -225,7 +225,7 @@ test('관리자 로그인·종류 빈 입력도 한국어로 안내하고 변경
     return route.fulfill({ status: 400, json: { error: { code: 'VALIDATION_ERROR' } } });
   });
   await page.goto('/admin/login');
-  await page.getByRole('button', { name: '로그인', exact: true }).click();
+  await page.getByRole('button', { name: '관리자 로그인', exact: true }).click();
   await expect(
     page.getByText('관리자 아이디와 12자 이상의 비밀번호를 입력해주세요.', { exact: true }),
   ).toBeVisible();
