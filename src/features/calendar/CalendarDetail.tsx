@@ -7,6 +7,7 @@ import type { StudyMember } from './types';
 import type { StudyRecord } from '../study-record/types';
 import { dayRecords, expiredQuery, periodRecordsRequest } from './client';
 import { duration } from './dates';
+import { useHolidays } from './useHolidays';
 import styles from '@/styles/notebook.module.css';
 import extra from './CalendarWorkspace.module.css';
 
@@ -33,6 +34,7 @@ export function CalendarDetail({
   onEdit: (record: StudyRecord) => void;
   onDelete: (record: StudyRecord) => void;
 }) {
+  const holidays = useHolidays(date, date);
   const query = useQuery({
     queryKey: ['records', userId, groupId, 'day', scope, date],
     queryFn: ({ signal }) => periodRecordsRequest(scope, date, date, userId, groupId, signal),
@@ -44,6 +46,11 @@ export function CalendarDetail({
   const groups = scope === 'mine' ? members.filter((member) => member.id === userId) : members;
   return (
     <StudyDialog title={`${date} 공부 기록`} onClose={onClose}>
+      {holidays.names(date).length > 0 && (
+        <p className={styles.holiday} aria-label="공휴일">
+          {holidays.names(date).join(' · ')}
+        </p>
+      )}
       {query.isPending && <p role="status">날짜 기록을 불러오고 있어요…</p>}
       {query.isError && (
         <div>
