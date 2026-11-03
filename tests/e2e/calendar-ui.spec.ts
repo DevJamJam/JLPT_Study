@@ -358,21 +358,26 @@ test('주간 날짜·빈 날 추가·기간 이동과 하단 오늘 추가를 �
   await expect(form).toHaveCount(0);
 });
 
-test('갱신 실패는 이전 기록 유지, 세션 만료는 이전 기록 숨김', async ({ page }) => {
+test('갱신 실패는 이전 기록 유지, 세션 만료는 이전 기록 숨김', async ({ page }, info) => {
   const { state } = await setup(page);
-  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
+  const retained =
+    info.project.name === 'SE3'
+      ? day(page).getByText('2명', { exact: true })
+      : day(page).locator('[title="공부하는 토끼"]');
+  await expect(retained).toBeVisible();
   state.calendarStatus = 503;
   await page.getByRole('button', { name: '달력 새로고침' }).click();
   await expect(page.getByRole('region', { name: '공부 달력' }).getByRole('alert')).toContainText(
     '달력을 불러오지 못했어요',
   );
-  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
+  await expect(retained).toBeVisible();
   state.calendarStatus = 401;
   await page.getByRole('button', { name: '달력 다시 불러오기' }).click();
   await expect(page.getByRole('region', { name: '공부 달력' }).getByRole('alert')).toContainText(
     '세션을 다시 확인',
   );
   await expect(day(page)).toBeDisabled();
+  await expect(retained).toHaveCount(0);
   await expect(day(page).locator('[title="공부하는 토끼"]')).toHaveCount(0);
 });
 
