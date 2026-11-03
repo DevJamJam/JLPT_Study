@@ -51,6 +51,10 @@ export function StudyShell({
     if (!main) return;
     let frame = 0;
     const update = () => {
+      main.parentElement?.style.setProperty(
+        '--shell-gutter',
+        `${main.offsetWidth - main.clientWidth}px`,
+      );
       const range = main.scrollHeight - main.clientHeight;
       const next = {
         overflow: range > 1,
@@ -112,7 +116,7 @@ export function StudyShell({
         </div>
       </header>
       <main ref={contentRef} className={styles.content}>
-        {children}
+        <div className={styles.contentInner}>{children}</div>
       </main>
       {loggedIn && (
         <footer className={styles.footer}>

@@ -185,7 +185,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
     member.id === userId ? { ...member, emoji, nickname } : member,
   );
   return (
-    <section aria-label="공부 달력">
+    <section className={extra.workspace} aria-label="공부 달력">
       <div className={styles.rings} aria-hidden="true">
         {Array.from({ length: 8 }, (_, index) => (
           <span key={index} />
@@ -219,52 +219,56 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
           </>
         )}
       </header>
-      <div className={styles.tabs} aria-label="달력 보기">
-        {(
-          [
-            ['group', '그룹 월간'],
-            ['mine', '내 월간'],
-            ['week', '내 주간'],
-          ] as const
-        ).map(([view, label]) => (
-          <button
-            type="button"
-            aria-pressed={route.view === view}
-            key={view}
-            onClick={() => update({ view, month: route.month, week: route.week })}
-          >
-            {label}
-          </button>
-        ))}
+      <div className={extra.controls}>
+        <div className={styles.tabs} aria-label="달력 보기">
+          {(
+            [
+              ['group', '그룹 월간'],
+              ['mine', '내 월간'],
+              ['week', '내 주간'],
+            ] as const
+          ).map(([view, label]) => (
+            <button
+              type="button"
+              aria-pressed={route.view === view}
+              key={view}
+              onClick={() => update({ view, month: route.month, week: route.week })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <PeriodPicker
+          label={period}
+          unit={route.view === 'week' ? '주' : '달'}
+          onMove={move}
+          previousDisabled={
+            route.view === 'week' ? route.week <= '1999-12-27' : route.month <= '2000-01'
+          }
+          nextDisabled={
+            route.view === 'week' ? route.week >= monday(today) : route.month >= today.slice(0, 7)
+          }
+        />
       </div>
-      <PeriodPicker
-        label={period}
-        unit={route.view === 'week' ? '주' : '달'}
-        onMove={move}
-        previousDisabled={
-          route.view === 'week' ? route.week <= '1999-12-27' : route.month <= '2000-01'
-        }
-        nextDisabled={
-          route.view === 'week' ? route.week >= monday(today) : route.month >= today.slice(0, 7)
-        }
-      />
-      <p className={extra.notice}>
-        공휴일 정보는 아직 확인할 수 없어요. 현재는 토요일과 일요일만 색상으로 구분해요.
-      </p>
-      <div className={extra.refresh}>
-        <Button
-          variant="quiet"
-          disabled={active.isFetching || members.isFetching}
-          onClick={() => {
-            void active.refetch();
-            void members.refetch();
-          }}
-        >
-          달력 새로고침
-        </Button>
-        {(active.isFetching || members.isFetching) && (
-          <span role="status">기록을 확인하고 있어요…</span>
-        )}
+      <div className={extra.statusBar}>
+        <p className={extra.notice}>
+          공휴일 정보는 아직 확인할 수 없어요. 현재는 토요일과 일요일만 색상으로 구분해요.
+        </p>
+        <div className={extra.refresh}>
+          <Button
+            variant="quiet"
+            disabled={active.isFetching || members.isFetching}
+            onClick={() => {
+              void active.refetch();
+              void members.refetch();
+            }}
+          >
+            달력 새로고침
+          </Button>
+          {(active.isFetching || members.isFetching) && (
+            <span role="status">기록을 확인하고 있어요…</span>
+          )}
+        </div>
       </div>
       {(active.isError || members.isError) && (
         <div className={extra.notice}>

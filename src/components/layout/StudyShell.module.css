@@ -12,9 +12,7 @@
     linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size: 23px 23px;
 }
-.month {
-  background-color: var(--notebook-pink);
-}
+.month,
 .week {
   background-color: var(--notebook-lavender);
 }
@@ -25,8 +23,8 @@
 }
 .headerInner {
   height: 100%;
-  max-width: 1120px;
-  padding: 0 16px;
+  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), 960px);
+  padding: 0;
   margin: auto;
   display: flex;
   justify-content: space-between;
@@ -57,24 +55,28 @@
 .content {
   width: 100%;
   min-height: 0;
-  max-width: 1120px;
   margin: 0 auto;
-  padding: 24px 16px 32px;
+  padding: 24px 0 24px;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   scrollbar-gutter: stable both-edges;
   scrollbar-width: auto;
   scrollbar-color: var(--primary-strong) var(--border);
 }
+.contentInner {
+  width: min(calc(100% - 32px), 960px);
+  margin: 0 auto;
+}
 .month .content,
 .week .content {
   padding-top: 0;
+  padding-bottom: 16px;
 }
 .footer {
   background: var(--surface);
 }
 .scrollGuide {
-  width: min(100%, 1120px);
+  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), 960px);
   margin: 0 auto;
   padding: 0 12px;
   display: flex;
@@ -134,7 +136,7 @@
   position: relative;
   /* Keep the raised + icon below the scroll controls as well as the main. */
   margin: 12px auto 0;
-  width: min(100%, 1120px);
+  width: min(calc(100% - 32px - var(--shell-gutter, 0px)), 960px);
   min-height: 74px;
   padding: 8px 8px max(8px, env(safe-area-inset-bottom));
   display: grid;
@@ -182,16 +184,6 @@
 .add .icon svg {
   width: 28px;
   height: 28px;
-}
-@media (min-width: 768px) {
-  .content {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-  .headerInner {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
 }
 
 .navButton:disabled {
