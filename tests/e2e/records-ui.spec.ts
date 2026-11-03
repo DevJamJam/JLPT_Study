@@ -577,3 +577,47 @@ test('필수값 누락·소수 시간은 한국어 필드 안내와 첫 오류 �
   await expect(form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true })).toBeFocused();
   expect(writes).toBe(0);
 });
+
+test('기록 제목과 테두리 수정·삭제 버튼은 긴 종류명에서도 같은 행에 놓인다', async ({
+  page,
+}, info) => {
+  await setup(page, {
+    records: (route) =>
+      route.fulfill({
+        json: {
+          data: {
+            records: [
+              { ...base, categoryName: '관리자가 추가한 아주 긴 공부종류' },
+              { ...base, id: '88000000-0000-4000-8000-000000000002', minutes: 40 },
+            ],
+            nextCursor: null,
+          },
+        },
+      }),
+  });
+  const record = page.locator('article').first();
+  await record.scrollIntoViewIfNeeded();
+  const geometry = await record.evaluate((el) => {
+    const title = el.querySelector('strong')!.getBoundingClientRect();
+    return Array.from(el.querySelectorAll('button')).map((button) => {
+      const box = button.getBoundingClientRect(),
+        style = getComputedStyle(button);
+      return {
+        center: Math.abs(box.y + box.height / 2 - title.y - title.height / 2),
+        height: box.height,
+        border: style.borderTopStyle,
+        color: style.borderTopColor,
+      };
+    });
+  });
+  expect(geometry).toHaveLength(2);
+  for (const item of geometry) {
+    expect(item.center).toBeLessThanOrEqual(1);
+    expect(item.height).toBeGreaterThanOrEqual(44);
+    expect(item.border).toBe('solid');
+    expect(item.color).not.toBe('rgba(0, 0, 0, 0)');
+  }
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await separatedShell(page);
+  await page.screenshot({ path: `test-results/${info.project.name}-records-actions-inline.png` });
+});
