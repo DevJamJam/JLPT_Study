@@ -1,5 +1,6 @@
 import { FiChevronLeft, FiChevronRight } from 'react-icons/fi';
 import styles from './PeriodPicker.module.css';
+import { Button } from './Button';
 
 export function PeriodPicker({
   label,
@@ -16,23 +17,23 @@ export function PeriodPicker({
 }) {
   return (
     <div className={styles.picker} data-testid="period-picker">
-      <button
-        type="button"
+      <Button
+        variant="icon"
         aria-label={`이전 ${unit}`}
         disabled={previousDisabled}
         onClick={() => onMove(-1)}
       >
         <FiChevronLeft aria-hidden="true" />
-      </button>
+      </Button>
       <span>{label}</span>
-      <button
-        type="button"
+      <Button
+        variant="icon"
         aria-label={`다음 ${unit}`}
         disabled={nextDisabled}
         onClick={() => onMove(1)}
       >
         <FiChevronRight aria-hidden="true" />
-      </button>
+      </Button>
     </div>
   );
 }

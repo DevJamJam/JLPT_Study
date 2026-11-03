@@ -2,6 +2,7 @@
 
 import { useState, useRef, type FormEvent } from 'react';
 import { Button } from '@/components/ui/Button';
+import { CalendarParticipants } from '../calendar/CalendarParticipants';
 import { Metric } from '@/components/ui/Metric';
 import { PeriodPicker } from '@/components/ui/PeriodPicker';
 import { StudyDialog } from '@/components/ui/StudyDialog';
@@ -288,26 +289,13 @@ export function DesignPreview() {
                               {Number(date.slice(-2))}
                             </span>
                             {calendarView === 'group' ? (
-                              <div className={styles.faces}>
-                                {groupMembers.map((member, i) => (
-                                  <span
-                                    key={member.name}
-                                    className={`${styles.face} ${i >= 3 ? styles.wideFace : ''} ${i >= 11 ? styles.overflowFace : ''}`}
-                                    title={member.name}
-                                  >
-                                    {member.name === '하루' ? emoji : member.emoji}
-                                    <span className={styles.tooltip}>{member.name}</span>
-                                  </span>
-                                ))}
-                                {groupMembers.length > 3 && (
-                                  <span className={styles.extra}>+{groupMembers.length - 3}</span>
-                                )}
-                                {groupMembers.length > 11 && (
-                                  <span className={styles.wideExtra}>
-                                    +{groupMembers.length - 11}
-                                  </span>
-                                )}
-                              </div>
+                              <CalendarParticipants
+                                members={groupMembers.map((member) => ({
+                                  id: member.name,
+                                  nickname: member.name,
+                                  emoji: member.name === '하루' ? emoji : member.emoji,
+                                }))}
+                              />
                             ) : (
                               ownTotal > 0 && (
                                 <>
