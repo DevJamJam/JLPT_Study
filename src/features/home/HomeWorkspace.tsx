@@ -221,9 +221,25 @@ function Home({ userId, groupId, emoji, nickname, ref }: Props) {
                 onClick={() => openDate(record.studyDate)}
                 aria-label={`${record.studyDate} ${record.categoryName} ${duration(record.minutes)} 기록 보기`}
               >
-                <strong>
-                  {record.categoryName} · {duration(record.minutes)}
-                </strong>
+                <span className={styles.recordCopy}>
+                  <strong>
+                    {record.categoryName} · {duration(record.minutes)}
+                  </strong>
+                  {record.startTime && (
+                    <span className={shared.muted}>시작 {record.startTime}</span>
+                  )}
+                  {record.quantity && (
+                    <span className={shared.muted}>
+                      {record.quantity}
+                      {
+                        ({ item: '개', page: '쪽', question: '문제' } as const)[
+                          record.quantityUnit!
+                        ]
+                      }
+                    </span>
+                  )}
+                  {record.memo && <span className={styles.memo}>{record.memo}</span>}
+                </span>
                 <time dateTime={record.studyDate}>{record.studyDate.replaceAll('-', '. ')}</time>
               </button>
             ))

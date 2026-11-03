@@ -106,10 +106,20 @@ test('홈 빈 상태·기록 저장·상세·수정·새로고침이 같은 실�
   await expect(form.locator('input[name="studyDate"]')).toHaveValue(today);
   await form.getByRole('combobox', { name: '공부 종류', exact: true }).selectOption(categoryId);
   await form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }).fill('45');
+  await form.getByRole('textbox', { name: '시작 시각 (선택)', exact: true }).fill('09:00');
+  await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('2');
+  await form.getByRole('combobox', { name: '단위', exact: true }).selectOption('page');
+  await form
+    .getByRole('textbox', { name: '메모 (선택)', exact: true })
+    .fill('오늘 배운 단어를 복습했어요.');
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();
   await expect(form).toHaveCount(0);
   await expect(metrics(page)).toContainText('45분');
   await expect(page.getByLabel('오늘 공부한 멤버')).toContainText('화면검증토끼');
+  const recent = page.getByRole('button', { name: `${today} 단어 45분 기록 보기`, exact: true });
+  await expect(recent).toContainText('시작 09:00');
+  await expect(recent).toContainText('2쪽');
+  await expect(recent).toContainText('오늘 배운 단어를 복습했어요.');
   await captureShellScroll(page, info.project.name, 'home-saved');
   await page.getByRole('button', { name: '오늘 내 기록 보기', exact: true }).click();
   const detail = page.getByRole('dialog', { name: `${today} 공부 기록`, exact: true });
