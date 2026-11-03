@@ -356,3 +356,37 @@ test('직접 날짜 주소·미래 추가 차단·잘못된 팝업 주소 정리
   await expect(page).not.toHaveURL(/date=|recordId=|wrong/);
   await expect(page.locator('dialog[open]')).toHaveCount(0);
 });
+
+test('넓은 화면의 월간6주는 본문 안에 맞고 상하단과 폭이 같다', async ({ page }, info) => {
+  if (info.project.name === 'SE3') return;
+  await setup(page);
+  await expect(page.getByTestId('live-month-grid').locator('button')).toHaveCount(42);
+  await expect(day(page).locator('[title="공부하는 토끼"]')).toBeVisible();
+  const main = await separatedShell(page);
+  await expect
+    .poll(() => main.evaluate((element) => element.scrollHeight - element.clientHeight))
+    .toBeLessThanOrEqual(1);
+  const bounds = await page.getByTestId('study-shell').evaluate((shell) => {
+    const content = shell.querySelector('main > div')!.getBoundingClientRect();
+    const header = shell.querySelector(':scope > header > div')!.getBoundingClientRect();
+    const nav = shell.querySelector('nav')!.getBoundingClientRect();
+    return [
+      Math.abs(content.left - header.left),
+      Math.abs(content.right - header.right),
+      Math.abs(content.left - nav.left),
+      Math.abs(content.right - nav.right),
+    ];
+  });
+  for (const distance of bounds) expect(distance).toBeLessThanOrEqual(1);
+  await page.screenshot({ path: `test-results/${info.project.name}-calendar-fit.png` });
+  const monthColor = await page
+    .getByTestId('study-shell')
+    .evaluate((node) => getComputedStyle(node).backgroundColor);
+  await page.getByRole('button', { name: '내 주간', exact: true }).click();
+  await expect(page.getByTestId('week-grid')).toBeVisible();
+  expect(
+    await page
+      .getByTestId('study-shell')
+      .evaluate((node) => getComputedStyle(node).backgroundColor),
+  ).toBe(monthColor);
+});

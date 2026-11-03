@@ -33,3 +33,54 @@
   outline: 2px solid var(--primary-strong);
   outline-offset: -3px;
 }
+
+@media (min-width: 768px) {
+  .workspace > div:first-child,
+  .workspace > div:first-child > span {
+    height: 20px;
+  }
+  .workspace > header {
+    height: auto;
+    min-height: 64px;
+    padding: 8px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .workspace > header h1 {
+    margin: 0;
+    font-size: 48px;
+  }
+  .workspace > header p:last-child {
+    margin-left: auto;
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.8fr);
+    align-items: center;
+    gap: 24px;
+    margin: 0 0 8px;
+  }
+  .controls > div {
+    margin: 0;
+  }
+  .statusBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .statusBar .notice {
+    margin: 0;
+    padding: 6px 10px;
+  }
+  .statusBar .refresh {
+    flex-shrink: 0;
+    margin: 0;
+  }
+  .workspace [data-testid='live-month-grid'] > button {
+    min-height: 64px;
+    padding: 6px;
+  }
+}
