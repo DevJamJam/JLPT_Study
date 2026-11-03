@@ -19,6 +19,16 @@ import type { NavigationGuard } from '../calendar/navigation';
 import type { StudyRecord } from './types';
 import styles from './RecordWorkspace.module.css';
 
+const fieldLabels: Record<string, string> = {
+  studyDate: '공부 날짜',
+  categoryId: '공부 종류',
+  minutes: '공부 시간 (분)',
+  startTime: '시작 시각 (선택)',
+  quantity: '공부량 (선택)',
+  quantityUnit: '단위',
+  memo: '메모 (선택)',
+};
+
 type Props = {
   navigationRef?: Ref<NavigationGuard>;
   initialDate?: string;
@@ -169,6 +179,9 @@ export function RecordForm({
     if (!value.ok) {
       setFieldErrors(value.errors as Record<string, string>);
       setError('입력한 내용을 확인해주세요.');
+      const first = Object.keys(value.errors)[0];
+      const field = event.currentTarget.elements.namedItem(first);
+      if (field instanceof HTMLElement) field.focus();
       return;
     }
     if (!options.some((category) => category.id === value.value.categoryId)) {
@@ -255,6 +268,7 @@ export function RecordForm({
   }
   function invalid(name: string) {
     return {
+      'aria-label': fieldLabels[name],
       'aria-invalid': !!fieldErrors[name],
       'aria-describedby': fieldErrors[name] ? `record-${name}-error` : undefined,
     };
@@ -280,6 +294,7 @@ export function RecordForm({
         <p role="status">등록된 공부 종류가 없어요. 관리자에게 문의해주세요.</p>
       )}
       <form
+        noValidate
         key={revision}
         onSubmit={submit}
         onChange={() => {
@@ -290,7 +305,7 @@ export function RecordForm({
       >
         <fieldset className={styles.fields} disabled={busy || uncertain || terminal}>
           <label className={styles.field}>
-            공부 날짜
+            {fieldLabels.studyDate}
             <input
               name="studyDate"
               type="date"
@@ -303,7 +318,7 @@ export function RecordForm({
             {fieldError('studyDate')}
           </label>
           <label className={styles.field}>
-            공부 종류
+            {fieldLabels.categoryId}
             <select
               name="categoryId"
               defaultValue={record?.categoryId ?? ''}
@@ -326,7 +341,7 @@ export function RecordForm({
           </label>
           <div className={styles.row}>
             <label className={styles.field}>
-              공부 시간 (분)
+              {fieldLabels.minutes}
               <input
                 defaultValue={record?.minutes}
                 name="minutes"
@@ -341,7 +356,7 @@ export function RecordForm({
               {fieldError('minutes')}
             </label>
             <label className={styles.field}>
-              시작 시각 (선택)
+              {fieldLabels.startTime}
               <input
                 defaultValue={record?.startTime ?? ''}
                 name="startTime"
@@ -353,7 +368,7 @@ export function RecordForm({
           </div>
           <div className={styles.row}>
             <label className={styles.field}>
-              공부량 (선택)
+              {fieldLabels.quantity}
               <input
                 defaultValue={record?.quantity ?? ''}
                 name="quantity"
@@ -367,7 +382,7 @@ export function RecordForm({
               {fieldError('quantity')}
             </label>
             <label className={styles.field}>
-              단위
+              {fieldLabels.quantityUnit}
               <select
                 name="quantityUnit"
                 defaultValue={record?.quantityUnit ?? ''}
@@ -382,7 +397,7 @@ export function RecordForm({
             </label>
           </div>
           <label className={styles.field}>
-            메모 (선택)
+            {fieldLabels.memo}
             <textarea
               defaultValue={record?.memo ?? ''}
               name="memo"

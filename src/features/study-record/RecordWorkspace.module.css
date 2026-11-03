@@ -89,6 +89,7 @@
   gap: 12px;
 }
 .error {
+  word-break: keep-all;
   margin: 10px 0 16px;
   color: var(--danger);
   font-size: 14px;
@@ -96,6 +97,8 @@
   overflow-wrap: anywhere;
 }
 .fieldError {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   color: var(--danger);
   font-size: 12px;
   font-weight: 400;

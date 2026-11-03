@@ -82,7 +82,7 @@ export function AuthForm({ mode }: { mode: 'login' | 'join' }) {
         <p className={styles.intro}>
           {joining ? '닉네임과 간편 비밀번호로 시작해요.' : '오늘의 공부도 차곡차곡 쌓아봐요.'}
         </p>
-        <form onSubmit={submit} aria-busy={pending}>
+        <form noValidate onSubmit={submit} aria-busy={pending}>
           <fieldset className={styles.fields} disabled={pending}>
             <label className={styles.field}>
               닉네임

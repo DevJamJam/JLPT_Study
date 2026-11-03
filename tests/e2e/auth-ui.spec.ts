@@ -147,3 +147,15 @@ test('인증 제한은 재시도 안내를 표시하고 입력을 보관한다',
   await expect(page.locator('form [role="alert"]')).toContainText('이후 다시 시도하거나');
   await expect(pin).toHaveValue('0123');
 });
+
+test('로그인 필수값 누락은 브라우저 영문 말풍선 대신 한국어 안내를 표시한다', async ({ page }) => {
+  let requests = 0;
+  await page.route('**/api/auth/login', (route) => {
+    requests++;
+    return route.fulfill({ status: 400, json: { error: { code: 'VALIDATION_ERROR' } } });
+  });
+  await page.goto('/login');
+  await page.getByRole('button', { name: '로그인', exact: true }).click();
+  await expect(page.getByText('닉네임은 2~12자로 입력해주세요.', { exact: true })).toBeVisible();
+  expect(requests).toBe(0);
+});

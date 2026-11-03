@@ -163,6 +163,7 @@
   color: var(--muted);
 }
 .error {
+  word-break: keep-all;
   padding: 16px;
   border-radius: 12px;
   background: var(--danger-soft);
