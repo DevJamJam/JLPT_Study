@@ -682,6 +682,7 @@ test('추가 정보 접기·펼치기 유지와 숨겨진 오류 펼침, 필수 
   await page.keyboard.press('Enter');
   await expect(memo).toBeVisible();
   await expect(memo).toHaveAttribute('placeholder', '예: 오늘 외운 단어 20개, 어려웠던 문법');
+  await page.screenshot({ path: `test-results/${info.project.name}-record-extras-expanded.png` });
   await memo.fill('입력한 추가 정보는 접어도 유지해요.');
   await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('5');
   await toggle.click();
@@ -695,7 +696,6 @@ test('추가 정보 접기·펼치기 유지와 숨겨진 오류 펼침, 필수 
   await expect(form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true })).toBeFocused();
   await expect(form.getByText('공부량과 단위를 함께 입력해 주세요.').first()).toBeVisible();
   await form.getByRole('combobox', { name: '단위', exact: true }).selectOption('item');
-  await page.screenshot({ path: `test-results/${info.project.name}-record-extras-expanded.png` });
   await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('');
   await form.getByRole('combobox', { name: '단위', exact: true }).selectOption('');
   await memo.fill('');
