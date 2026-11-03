@@ -79,6 +79,7 @@ export type RecordDatabase = CreateRecordDatabase<StudyRecord> &
     getRecord(id: string, groupId: string): Promise<StudyRecord>;
     listCategories(): Promise<{ id: string; name: string }[]>;
     listRecords(query: RecordQuery, actorId: string, groupId: string): Promise<RecordPage>;
+    listRecentRecords(today: string, actorId: string, groupId: string): Promise<StudyRecord[]>;
   };
 
 export function createRecordDatabase(
@@ -107,6 +108,32 @@ export function createRecordDatabase(
     ...createCalendarDatabase(config, transport, observeRequest),
     resolveSession: auth.resolveSession,
     getRecord,
+    async listRecentRecords(today, actorId, groupId) {
+      if (!isUuid(actorId) || !isUuid(groupId)) throw unavailable();
+      const records: StudyRecord[] = [];
+      const seen = new Set<string>();
+      while (records.length < 5) {
+        const query = new URLSearchParams({
+          select: fields,
+          group_id: `eq.${groupId}`,
+          user_id: `eq.${actorId}`,
+          study_date: `lte.${today}`,
+          order,
+          limit: String(5 - records.length),
+          offset: String(records.length),
+        });
+        const rows = await request(`study_records?${query}`);
+        if (!Array.isArray(rows) || rows.length > 5 - records.length) throw unavailable();
+        if (!rows.length) break;
+        for (const row of rows) {
+          const record = recordFromRow(row, groupId, actorId);
+          if (record.studyDate > today || seen.has(record.id)) throw unavailable();
+          seen.add(record.id);
+          records.push(record);
+        }
+      }
+      return records;
+    },
     async updateRecord(input) {
       const record = input.record;
       const result = await request('rpc/save_record', {

@@ -9,11 +9,18 @@ import { calendarDays, type CalendarRecord } from './aggregate';
 import { weeklyStudy } from '../study/aggregate';
 import { shiftDate } from '../../features/calendar/dates';
 import type { StudyWeek } from '../../features/study/types';
+import { monday } from '../../features/calendar/dates';
+import { homeTotals } from '../home/aggregate';
 
 const unavailable = () => new AuthServiceError(503, 'AUTH_UNAVAILABLE');
 const object = (value: unknown): value is Record<string, unknown> =>
   !!value && typeof value === 'object' && !Array.isArray(value);
 export type CalendarDatabase = {
+  getHomeTotals(
+    today: string,
+    actorId: string,
+    groupId: string,
+  ): Promise<ReturnType<typeof homeTotals>>;
   listMembers(groupId: string): Promise<StudyMember[]>;
   getStudy(week: string, actorId: string, groupId: string): Promise<StudyWeek>;
   getCalendar(
@@ -73,6 +80,7 @@ export function createCalendarDatabase(
     input: Extract<RecordQuery, { kind: 'period' }>,
     actorId: string,
     groupId: string,
+    homeToday?: string,
   ) {
     if (!isUuid(actorId) || !isUuid(groupId)) throw unavailable();
     const members = await listMembers(groupId);
@@ -87,6 +95,7 @@ export function createCalendarDatabase(
     query.append('study_date', `gte.${input.from}`);
     query.append('study_date', `lte.${input.to}`);
     if (input.scope === 'mine') query.set('user_id', `eq.${actorId}`);
+    if (homeToday) query.set('or', `(user_id.eq.${actorId},study_date.eq.${homeToday})`);
     const records: CalendarRecord[] = [];
     let after = '';
     for (;;) {
@@ -102,6 +111,7 @@ export function createCalendarDatabase(
           !isUuid(row.user_id) ||
           !memberIds.has(row.user_id) ||
           (input.scope === 'mine' && row.user_id !== actorId) ||
+          (homeToday !== undefined && row.user_id !== actorId && row.study_date !== homeToday) ||
           !isDateKey(row.study_date) ||
           row.study_date < input.from ||
           row.study_date > input.to ||
@@ -124,6 +134,24 @@ export function createCalendarDatabase(
   }
   return {
     listMembers,
+    async getHomeTotals(today, actorId, groupId) {
+      if (!isDateKey(today) || today < '2000-01-01') throw unavailable();
+      const monthStart = `${today.slice(0, 7)}-01`;
+      const weekStart = monday(today);
+      const from = weekStart < monthStart ? weekStart : monthStart;
+      const { members, records } = await readPeriod(
+        {
+          kind: 'period',
+          scope: 'group',
+          from: from < '2000-01-01' ? '2000-01-01' : from,
+          to: today,
+        },
+        actorId,
+        groupId,
+        today,
+      );
+      return homeTotals(today, actorId, records, members);
+    },
     async getCalendar(input, actorId, groupId) {
       const { members, records } = await readPeriod(input, actorId, groupId);
       return calendarDays(input.from, input.to, records, members);

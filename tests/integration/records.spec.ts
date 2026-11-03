@@ -5,6 +5,7 @@ import { hashSessionToken } from '../../src/server/auth/crypto';
 import { createRecordsHttp } from '../../src/server/records/http';
 import { createAdminHttp } from '../../src/server/admin/http';
 import { scryptSync } from 'node:crypto';
+import { monday, shiftDate } from '../../src/features/calendar/dates';
 
 const databaseUrl = process.env.JLPT_TEST_DATABASE_URL;
 const restUrl = process.env.JLPT_TEST_POSTGREST_URL;
@@ -388,4 +389,57 @@ test('실제 REST/DB에서 관리자 로그인·종류 CRUD·사용 중 삭제 �
   expect((await blocked.json()).error.code).toBe('CATEGORY_IN_USE');
   expect((await adminHttp.logout(adminRequest({}, cookie))).status).toBe(200);
   expect((await adminHttp.me(adminRequest(undefined, cookie))).status).toBe(401);
+});
+
+test('실제 홈 요약은100행 상한·본인/그룹 범위·월 경계·최근5개와 기록 수정을 반영한다', async () => {
+  const today = sql("select (now() at time zone 'Asia/Seoul')::date;").trim();
+  const previous = shiftDate(monday(today), -1);
+  const summaryToken = 's'.repeat(43);
+  const recordId = '72000000-0000-4000-8000-000000000900';
+  sql(`
+    insert into public.sessions(token_hash,user_id,credential_version,expires_at,mode)
+      select '${hashSessionToken(summaryToken)}','${user}',credential_version,now()+interval '1 hour','normal' from public.user_credentials where user_id='${user}';
+    insert into public.study_records(id,group_id,user_id,study_date,minutes,category_id,create_fingerprint) values
+      ('${recordId}','${group}','${user}','${today}',30,'${category}',repeat('a',64)),
+      ('72000000-0000-4000-8000-000000000901','${group}','${peer}','${today}',20,'${category}',repeat('a',64)),
+      ('72000000-0000-4000-8000-000000000902','${group}','${user}','${previous}',10,'${category}',repeat('a',64)),
+      ('72000000-0000-4000-8000-000000000903','${otherGroup}','${outsider}','${today}',200,'${category}',repeat('a',64));
+    insert into public.study_records(id,group_id,user_id,study_date,minutes,category_id,create_fingerprint)
+      select ('72000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'${group}','${user}','${today}',1,'${category}',repeat('a',64) from generate_series(1000,1103)n;
+  `);
+  const response = await http.summary(req('', undefined, summaryToken));
+  expect(response.status).toBe(200);
+  const data = (await response.json()).data;
+  expect(data).toMatchObject({
+    today,
+    weekStart: monday(today),
+    todayMinutes: 134,
+    weekMinutes: 134,
+    monthMinutes: 134 + (previous.slice(0, 7) === today.slice(0, 7) ? 10 : 0),
+    groupTodayMinutes: 154,
+  });
+  expect(data.todayParticipants.map((m: { id: string }) => m.id).sort()).toEqual(
+    [user, peer].sort(),
+  );
+  expect(data.recentRecords).toHaveLength(5);
+  expect(
+    data.recentRecords.every(
+      (r: { userId: string; groupId: string; studyDate: string }) =>
+        r.userId === user && r.groupId === group && r.studyDate === today,
+    ),
+  ).toBe(true);
+  const changed = await http.update(
+    req(
+      '',
+      { studyDate: today, minutes: 45, categoryId: category, expectedVersion: 1 },
+      summaryToken,
+      'PATCH',
+    ),
+    recordId,
+  );
+  expect(changed.status).toBe(200);
+  expect(
+    (await (await http.summary(req('', undefined, summaryToken))).json()).data.todayMinutes,
+  ).toBe(149);
+  expect((await http.summary(req('', undefined, limitedToken))).status).toBe(403);
 });

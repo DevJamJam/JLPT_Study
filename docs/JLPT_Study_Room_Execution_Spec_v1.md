@@ -464,7 +464,7 @@ type Failure = {error:{code:string; message:string; fieldErrors?:Record<string,s
 | calendar?scope&from&to | {days:Day[]}. 최대42일, 기록 없는 날짜도0 반환 |
 | study?week | {weekStart:string, totalMinutes:number, activeMembers:number, members:WeekMember[]}. days는 항상7개 |
 | me/dashboard?month | MonthSummary |
-| summary | {today:string, todayMinutes:number, weekStart:string, weekMinutes:number, month:string, monthMinutes:number, groupTodayMinutes:number, todayParticipants:Member[], recentRecords:StudyRecord[]} |
+| summary | {userId:string, groupId:string, today:string, todayMinutes:number, weekStart:string, weekMinutes:number, month:string, monthMinutes:number, groupTodayMinutes:number, todayParticipants:Member[], recentRecords:StudyRecord[]} |
 | POST admin/members/:id/reset-pin | {userId:string, mustChangePin:true}. body={requestId:string, expectedCredentialVersion:number}, 운영자 전용 |
 | GET admin/members | {members:(Member & {credentialVersion:number; mustChangePin:boolean})[]}. 운영자 전용 |
 

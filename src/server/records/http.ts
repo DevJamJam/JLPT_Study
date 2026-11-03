@@ -9,6 +9,7 @@ import { mutateRecord } from './mutate';
 import { isUuid, parseRecordQuery } from './query';
 import { parseStudyWeek } from '../study/query';
 import { adminTokenHash, createAdminHttp } from '../admin/http';
+import { seoulDateKey } from '../../lib/seoul-date';
 
 const messages: Record<string, string> = {
   VALIDATION_ERROR: '공부 기록의 입력과 조회 조건을 확인해주세요.',
@@ -31,6 +32,7 @@ export function createRecordsHttp(
       | 'categories'
       | 'members'
       | 'calendar'
+      | 'summary'
       | 'study',
     request: NextRequest,
     id?: string,
@@ -63,6 +65,23 @@ export function createRecordsHttp(
           return json({ data: await mutateRecord(action, id, body, hash, db) });
         const session = await db.resolveSession(hash);
         if (session.profile.mustChangePin) throw new RecordRequestError(403, 'PIN_CHANGE_REQUIRED');
+        if (action === 'summary') {
+          if (request.nextUrl.searchParams.size)
+            throw new RecordRequestError(400, 'VALIDATION_ERROR');
+          const today = seoulDateKey();
+          const [totals, recentRecords] = await Promise.all([
+            db.getHomeTotals(today, session.profile.id, session.group.id),
+            db.listRecentRecords(today, session.profile.id, session.group.id),
+          ]);
+          return json({
+            data: {
+              userId: session.profile.id,
+              groupId: session.group.id,
+              ...totals,
+              recentRecords,
+            },
+          });
+        }
         if (action === 'study') {
           const week = parseStudyWeek(request.nextUrl.searchParams);
           return json({ data: await db.getStudy(week, session.profile.id, session.group.id) });
@@ -126,6 +145,7 @@ export function createRecordsHttp(
     list: (request: NextRequest) => handle('list', request),
     members: (request: NextRequest) => handle('members', request),
     study: (request: NextRequest) => handle('study', request),
+    summary: (request: NextRequest) => handle('summary', request),
     calendar: (request: NextRequest) => handle('calendar', request),
     categories: (request: NextRequest) => handle('categories', request),
   };

@@ -51,7 +51,7 @@ async function setup(
     handlers.records ??
       ((route) => route.fulfill({ json: { data: { records: [base], nextCursor: null } } })),
   );
-  await page.goto('/');
+  await page.goto('/me');
   await expect(page.getByRole('heading', { name: '내 기록', exact: true })).toBeVisible();
 }
 async function fill(page: Page) {
