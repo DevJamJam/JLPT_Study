@@ -88,3 +88,7 @@
   background: var(--danger-soft);
   color: var(--danger);
 }
+
+.emptyParticipants {
+  text-align: center;
+}
