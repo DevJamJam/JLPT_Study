@@ -1081,7 +1081,7 @@ type Failure = {error:{code:string; message:string; fieldErrors?:Record&lt;strin
           </tr>
           <tr>
             <td>summary</td>
-            <td>{today:string, todayMinutes:number, weekStart:string, weekMinutes:number, month:string, monthMinutes:number, groupTodayMinutes:number, todayParticipants:Member[], recentRecords:StudyRecord[]}</td>
+            <td>{userId:string, groupId:string, today:string, todayMinutes:number, weekStart:string, weekMinutes:number, month:string, monthMinutes:number, groupTodayMinutes:number, todayParticipants:Member[], recentRecords:StudyRecord[]}</td>
           </tr>
           <tr>
             <td>POST admin/members/:id/reset-pin</td>

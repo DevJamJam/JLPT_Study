@@ -177,3 +177,57 @@ test('홈 하단＋입력은 뒤로가기에서 초안을 보호하고 상세의
   await expect(detail).toBeVisible();
   await expect(detail).toContainText('내 공부 시간 · 15분');
 });
+
+test('홈의 긴 종류명·참여 멤버15명·최근5개도 가로 넘침이나 메뉴 겹침 없이 표시한다', async ({
+  page,
+}, info) => {
+  await setup(page);
+  const participants = Array.from({ length: 15 }, (_, n) => ({
+    id: n === 0 ? userId : `72000000-0000-4000-8000-${String(n + 100).padStart(12, '0')}`,
+    nickname: n === 0 ? '화면검증토끼' : `아주긴닉네임멤버${n}`,
+    emoji: n % 2 ? '🐳' : '🐰',
+    joinedAt: '2026-11-03T00:00:00Z',
+  }));
+  const records = Array.from({ length: 5 }, (_, n) => ({
+    id: `72000000-0000-4000-8000-${String(n + 200).padStart(12, '0')}`,
+    userId,
+    groupId,
+    studyDate: today,
+    categoryId,
+    categoryName: '긴공부종류이름을등록한상태',
+    minutes: 90,
+    startTime: null,
+    quantity: null,
+    quantityUnit: null,
+    memo: null,
+    version: 1,
+    createdAt: '2026-11-03T03:00:00Z',
+    updatedAt: '2026-11-03T03:00:00Z',
+  }));
+  await page.route('**/api/summary', (r) =>
+    r.fulfill({
+      json: {
+        data: {
+          userId,
+          groupId,
+          today,
+          weekStart: '2026-11-02',
+          month: '2026-11',
+          todayMinutes: 450,
+          weekMinutes: 450,
+          monthMinutes: 450,
+          groupTodayMinutes: 900,
+          todayParticipants: participants,
+          recentRecords: records,
+        },
+      },
+    }),
+  );
+  await page.getByRole('button', { name: '홈 새로고침', exact: true }).click();
+  await expect(page.getByLabel('오늘 공부한 멤버').getByRole('listitem')).toHaveCount(15);
+  await expect(
+    page.getByRole('button', { name: /긴공부종류이름을등록한상태.*기록 보기/ }),
+  ).toHaveCount(5);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await captureShellScroll(page, info.project.name, 'home-members');
+});
