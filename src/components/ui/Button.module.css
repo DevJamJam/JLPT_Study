@@ -23,3 +23,20 @@
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+.icon {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-color: var(--decoration-33);
+  background: var(--notebook-paper);
+  color: var(--text);
+}
+.icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
+  stroke-width: 2;
+}

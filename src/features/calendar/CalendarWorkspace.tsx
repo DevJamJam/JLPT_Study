@@ -12,6 +12,7 @@ import { RecordForm } from '../study-record/RecordForm';
 import { RecordAction } from '../study-record/RecordAction';
 import type { StudyRecord } from '../study-record/types';
 import { CalendarDetail } from './CalendarDetail';
+import { CalendarParticipants } from './CalendarParticipants';
 import { calendarRoute, duration, monday, shiftDate } from './dates';
 import {
   calendarRequest,
@@ -260,8 +261,7 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
         </p>
         <div className={extra.refresh}>
           <Button
-            variant="quiet"
-            className={extra.refreshButton}
+            variant="icon"
             aria-label="달력 새로고침"
             title="달력 새로고침"
             aria-busy={active.isFetching || members.isFetching}
@@ -405,27 +405,16 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
                     {Number(date.slice(-2))}
                   </span>
                   {route.view === 'group' ? (
-                    <div className={styles.faces}>
-                      {people.map((person, index) => {
-                        const member = memberList.find((member) => member.id === person.userId);
-                        return (
-                          <span
-                            className={`${styles.face} ${index >= 3 ? styles.wideFace : ''} ${index >= 11 ? styles.overflowFace : ''}`}
-                            key={person.userId}
-                            title={member?.nickname}
-                          >
-                            {member?.emoji ?? '👤'}
-                            <span className={styles.tooltip}>{member?.nickname ?? '스터디원'}</span>
-                          </span>
-                        );
+                    <CalendarParticipants
+                      members={people.map((person) => {
+                        const member = memberList.find((row) => row.id === person.userId);
+                        return {
+                          id: person.userId,
+                          nickname: member?.nickname ?? '스터디원',
+                          emoji: member?.emoji ?? '👤',
+                        };
                       })}
-                      {people.length > 3 && (
-                        <span className={styles.extra}>+{people.length - 3}</span>
-                      )}
-                      {people.length > 11 && (
-                        <span className={styles.wideExtra}>+{people.length - 11}</span>
-                      )}
-                    </div>
+                    />
                   ) : (
                     !!day?.totalMinutes && (
                       <>

@@ -23,13 +23,16 @@ const base = {
   createdAt: '2026-10-29T03:00:00Z',
   updatedAt: '2026-10-29T03:00:00Z',
 };
-async function setup(page: Page, url = '/calendar', crowded = false) {
-  const members = Array.from({ length: crowded ? 15 : 2 }, (_, index) => ({
-    id: index === 0 ? userId : '58000000-0000-4000-8000-' + String(100 + index).padStart(12, '0'),
-    nickname: index === 0 ? '공부하는 토끼' : '스터디원' + index,
-    emoji: ['🐰', '🐱', '🐶', '🐼', '🐻'][index % 5],
-    joinedAt: '2026-10-01T00:00:00Z',
-  }));
+async function setup(page: Page, url = '/calendar', crowded: boolean | number = false) {
+  const members = Array.from(
+    { length: typeof crowded === 'number' ? crowded : crowded ? 15 : 2 },
+    (_, index) => ({
+      id: index === 0 ? userId : '58000000-0000-4000-8000-' + String(100 + index).padStart(12, '0'),
+      nickname: index === 0 ? '공부하는 토끼' : '스터디원' + index,
+      emoji: ['🐰', '🐱', '🐶', '🐼', '🐻'][index % 5],
+      joinedAt: '2026-10-01T00:00:00Z',
+    }),
+  );
   const records = members.map((member, index) => ({
     ...base,
     userId: member.id,
@@ -188,8 +191,8 @@ test('월간42칸·15명 축약·개인 보기·공통 메뉴를 실제 데이�
     element.scrollTop = 0;
   });
   await separatedShell(page);
-  const wide = info.project.name !== 'SE3';
-  await expect(day(page).getByText(wide ? '+4' : '+12', { exact: true })).toBeVisible();
+  await expect(day(page).getByText('+10', { exact: true })).toBeVisible();
+  await expect(day(page).locator('[data-member-id]')).toHaveCount(5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({
     path: `test-results/${info.project.name}-calendar-group.png`,
@@ -197,7 +200,7 @@ test('월간42칸·15명 축약·개인 보기·공통 메뉴를 실제 데이�
   });
   await page.getByRole('button', { name: '내 월간', exact: true }).click();
   await expect(day(page).getByText('30분', { exact: true })).toBeVisible();
-  await expect(day(page).getByText('+12', { exact: true })).toHaveCount(0);
+  await expect(day(page).getByText('+10', { exact: true })).toHaveCount(0);
   await page.screenshot({
     path: `test-results/${info.project.name}-calendar-mine.png`,
     fullPage: false,
@@ -407,4 +410,59 @@ test('넓은 화면의 월간6주는 본문 안에 맞고 상하단과 폭이 �
       .getByTestId('study-shell')
       .evaluate((node) => getComputedStyle(node).backgroundColor),
   ).toBe(monthColor);
+});
+
+test('참여자5명 경계와 화살표·새로고침의 공통 크기·중앙 정렬', async ({ page }, info) => {
+  for (const count of [5, 6, 15]) {
+    await setup(page, '/calendar', count);
+    const participants = day(page).getByTestId('calendar-participants');
+    await expect(participants.locator('[data-member-id]')).toHaveCount(5);
+    if (count > 5)
+      await expect(participants.getByText(`+${count - 5}`, { exact: true })).toBeVisible();
+    else await expect(participants.getByText(/^\+\d+$/)).toHaveCount(0);
+    await day(page).scrollIntoViewIfNeeded();
+    await page.screenshot({
+      path: `test-results/${info.project.name}-calendar-members-${count}.png`,
+    });
+  }
+  await page.getByRole('button', { name: '이전 달', exact: true }).scrollIntoViewIfNeeded();
+  const selectors = ['이전 달', '다음 달', '달력 새로고침'];
+  const appearances = [];
+  for (const name of selectors) {
+    appearances.push(
+      await page.getByRole('button', { name, exact: true }).evaluate((button) => {
+        const icon = button.querySelector('svg')!;
+        const box = button.getBoundingClientRect();
+        const glyph = icon.getBoundingClientRect();
+        const style = getComputedStyle(button);
+        return {
+          width: box.width,
+          height: box.height,
+          iconWidth: glyph.width,
+          iconHeight: glyph.height,
+          dx: Math.abs(glyph.x + glyph.width / 2 - box.x - box.width / 2),
+          dy: Math.abs(glyph.y + glyph.height / 2 - box.y - box.height / 2),
+          border: style.border,
+          radius: style.borderRadius,
+          background: style.backgroundColor,
+          color: style.color,
+          stroke: getComputedStyle(icon).strokeWidth,
+        };
+      }),
+    );
+  }
+  expect(appearances[1]).toEqual(appearances[0]);
+  expect(appearances[2]).toEqual(appearances[0]);
+  expect(appearances[0]).toMatchObject({
+    width: 44,
+    height: 44,
+    iconWidth: 24,
+    iconHeight: 24,
+    dx: 0,
+    dy: 0,
+    stroke: '2px',
+  });
+  await page.screenshot({
+    path: `test-results/${info.project.name}-calendar-controls-matched.png`,
+  });
 });
