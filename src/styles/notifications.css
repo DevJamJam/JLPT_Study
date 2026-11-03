@@ -16,3 +16,45 @@
 .study-alert .swal2-html-container {
   white-space: pre-line;
 }
+
+.study-alert .swal2-title,
+.study-toast .swal2-title {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.study-alert .swal2-title {
+  padding: 20px 24px 0;
+  font-size: 22px;
+  line-height: 1.5;
+}
+.study-alert .swal2-html-container {
+  margin: 16px 24px 0;
+  font-size: 16px;
+  line-height: 1.7;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.study-alert .swal2-actions {
+  gap: 8px;
+  margin-top: 24px;
+  padding: 0 16px;
+}
+.study-alert .swal2-confirm,
+.study-alert .swal2-cancel {
+  min-width: 88px;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 16px;
+  border-radius: var(--radius-input);
+  font: inherit;
+  font-size: 16px;
+  line-height: 24px;
+}
+.study-alert .swal2-cancel {
+  color: var(--text);
+  background: var(--surface-soft);
+}
+.study-toast .swal2-title {
+  font-size: 14px;
+  line-height: 1.7;
+}

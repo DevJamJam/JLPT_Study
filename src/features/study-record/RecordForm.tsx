@@ -169,6 +169,9 @@ export function RecordForm({
     if (!value.ok) {
       setFieldErrors(value.errors as Record<string, string>);
       setError('입력한 내용을 확인해주세요.');
+      const first = Object.keys(value.errors)[0];
+      const field = event.currentTarget.elements.namedItem(first);
+      if (field instanceof HTMLElement) field.focus();
       return;
     }
     if (!options.some((category) => category.id === value.value.categoryId)) {
@@ -280,6 +283,7 @@ export function RecordForm({
         <p role="status">등록된 공부 종류가 없어요. 관리자에게 문의해주세요.</p>
       )}
       <form
+        noValidate
         key={revision}
         onSubmit={submit}
         onChange={() => {

@@ -71,6 +71,7 @@ export function PinChangeForm({
   }
   return (
     <form
+      noValidate
       className={styles.resetForm}
       onSubmit={submit}
       aria-busy={pending}

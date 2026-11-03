@@ -139,6 +139,31 @@ test('회원15명·PIN 초기화·영구 삭제 확인과 취소를 검증한다
   expect(state.removeCalls).toBe(0);
   await page.getByRole('button', { name: '화면검증토끼 PIN 초기화', exact: true }).click();
   await expect(page.getByRole('button', { name: '취소', exact: true })).toBeFocused();
+  const warning = page.locator('.study-alert');
+  await expect
+    .poll(() =>
+      warning.evaluate((el) =>
+        el.getAnimations({ subtree: true }).every((a) => a.playState !== 'running'),
+      ),
+    )
+    .toBe(true);
+  await expect(warning.locator('.swal2-title')).toHaveCSS('word-break', 'keep-all');
+  await expect(warning.locator('.swal2-title')).toHaveCSS('font-size', '22px');
+  for (const name of ['초기화', '취소']) {
+    const box = await warning.getByRole('button', { name, exact: true }).boundingBox();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
+  const wordLines = await warning.locator('.swal2-title').evaluate((element) => {
+    const node = element.firstChild!;
+    const text = node.textContent!;
+    const word = '초기화할까요?';
+    const start = text.indexOf(word);
+    const range = document.createRange();
+    range.setStart(node, start);
+    range.setEnd(node, start + word.length);
+    return range.getClientRects().length;
+  });
+  expect(wordLines).toBe(1);
   await page.screenshot({
     path: `test-results/${info.project.name}-admin-reset-confirm.png`,
     animations: 'disabled',

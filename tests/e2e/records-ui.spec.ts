@@ -548,3 +548,32 @@ test('내 기록 빈 화면도 공통 콘텐츠 폭과 상단 여백을 따른�
   expect(geometry.top).toBe(24);
   await page.screenshot({ path: `test-results/${info.project.name}-records-aligned-empty.png` });
 });
+
+test('필수값 누락·소수 시간은 한국어 필드 안내와 첫 오류 포커스를 제공하고 전송하지 않는다', async ({
+  page,
+}, info) => {
+  let writes = 0;
+  await setup(page, {
+    records: (route) => {
+      if (route.request().method() === 'POST') writes++;
+      return route.fulfill({ json: { data: { records: [], nextCursor: null } } });
+    },
+  });
+  await page.getByRole('button', { name: '공부 기록 남기기', exact: true }).click();
+  const form = page.getByRole('form', { name: '공부 기록 입력' });
+  await form.getByRole('button', { name: '기록 저장', exact: true }).click();
+  await expect(form.getByText('공부 종류를 선택해 주세요.', { exact: true })).toBeVisible();
+  await expect(form.getByRole('combobox', { name: '공부 종류', exact: true })).toBeFocused();
+  await expect(
+    form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }),
+  ).toHaveAttribute('aria-invalid', 'true');
+  await page.screenshot({ path: `test-results/${info.project.name}-record-required-korean.png` });
+  await form.getByRole('combobox', { name: '공부 종류', exact: true }).selectOption(categoryId);
+  await form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }).fill('1.5');
+  await form.getByRole('button', { name: '기록 저장', exact: true }).click();
+  await expect(
+    form.getByText('공부 시간은 1분부터 1440분까지 정수로 입력해 주세요.', { exact: true }),
+  ).toBeVisible();
+  await expect(form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true })).toBeFocused();
+  expect(writes).toBe(0);
+});
