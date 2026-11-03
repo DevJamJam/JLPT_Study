@@ -47,7 +47,7 @@ export function CalendarDetail({
   return (
     <StudyDialog title={`${date} 공부 기록`} onClose={onClose}>
       {holidays.names(date).length > 0 && (
-        <p className={styles.holiday} aria-label="공휴일">
+        <p className={extra.holidayName} aria-label="공휴일">
           {holidays.names(date).join(' · ')}
         </p>
       )}

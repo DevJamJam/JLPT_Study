@@ -66,7 +66,7 @@ async function setup(page: Page, url = '/calendar', crowded: boolean | number = 
     const year = new URL(route.request().url()).searchParams.get('year')!;
     const known = {
       '2026-10-03': ['개천절'],
-      '2026-10-05': ['대체공휴일'],
+      '2026-10-05': ['대체공휴일(개천절)'],
       '2026-10-09': ['한글날'],
       '2026-01-01': ['1월1일'],
       '2025-12-25': ['기독탄신일'],
