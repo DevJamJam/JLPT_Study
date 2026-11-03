@@ -1,3 +1,4 @@
+import { expandRecordExtras } from './record-fixture';
 import { captureShellScroll, separatedShell } from './layout-assertions';
 import { test, expect, type Page, type Route } from '@playwright/test';
 
@@ -303,6 +304,7 @@ test('상세 수정은 새 날짜로 돌아가고 중첩 팝업을 만들지 않
 test('뒤로가기 취소는 초안을 유지하고 제출 중에는 팝업을 유지한다', async ({ page }) => {
   const { state } = await setup(page);
   const form = await newForm(page);
+  await expandRecordExtras(form);
   await form
     .getByRole('textbox', { name: '메모 (선택)', exact: true })
     .fill('뒤로가도 남아 있는 초안');
@@ -326,6 +328,7 @@ test('뒤로가기 취소는 초안을 유지하고 제출 중에는 팝업을 �
   ).toBeVisible();
   await page.getByRole('button', { name: '팝업 닫기' }).click();
   const next = await newForm(page, '2026-10-27');
+  await expandRecordExtras(next);
   await next.getByRole('textbox', { name: '메모 (선택)', exact: true }).fill('폐기할 초안');
   await page.goBack();
   await page.getByRole('button', { name: '버리기', exact: true }).click();

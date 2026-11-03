@@ -1,3 +1,4 @@
+import { expandRecordExtras } from './record-fixture';
 import { test, expect, type Page } from '@playwright/test';
 import { captureShellScroll, separatedShell } from './layout-assertions';
 import type { StudyRecord } from '../../src/features/study-record/types';
@@ -97,9 +98,12 @@ test('홈 빈 상태·기록 저장·상세·수정·새로고침이 같은 실�
   await expect(form.locator('input[name="studyDate"]')).toHaveValue(today);
   await form.getByRole('combobox', { name: '공부 종류', exact: true }).selectOption(categoryId);
   await form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }).fill('45');
+  await expandRecordExtras(form);
   await form.getByRole('textbox', { name: '시작 시각 (선택)', exact: true }).fill('09:00');
+  await expandRecordExtras(form);
   await form.getByRole('spinbutton', { name: '공부량 (선택)', exact: true }).fill('2');
   await form.getByRole('combobox', { name: '단위', exact: true }).selectOption('page');
+  await expandRecordExtras(form);
   await form
     .getByRole('textbox', { name: '메모 (선택)', exact: true })
     .fill('오늘 배운 단어를 복습했어요.');
@@ -162,6 +166,7 @@ test('홈 하단＋입력은 뒤로가기에서 초안을 보호하고 상세의
   await setup(page);
   await page.getByRole('button', { name: '새 공부 기록', exact: true }).click();
   const form = page.getByRole('form', { name: '공부 기록 입력' });
+  await expandRecordExtras(form);
   await form.getByRole('textbox', { name: '메모 (선택)', exact: true }).fill('지우면 안 되는 초안');
   await page.goBack();
   await page.getByRole('button', { name: '계속 작성', exact: true }).click();

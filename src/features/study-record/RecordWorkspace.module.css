@@ -157,3 +157,46 @@
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
+
+.extraInfo {
+  margin: 0 0 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-input);
+}
+.extraInfo summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 48px;
+  padding: 12px;
+  color: var(--primary-strong);
+  background: var(--surface-soft);
+  border-radius: var(--radius-input);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.extraInfo summary::-webkit-details-marker {
+  display: none;
+}
+.extraInfo summary svg {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.extraInfo[open] summary svg {
+  transform: rotate(180deg);
+}
+.extraInfo summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.extraFields {
+  padding: 18px 12px 0;
+}
+.field textarea::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+}

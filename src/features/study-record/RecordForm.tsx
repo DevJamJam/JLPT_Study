@@ -2,6 +2,7 @@
 
 import { useEffect, useImperativeHandle, useRef, useState, type Ref, type FormEvent } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { FiChevronDown } from 'react-icons/fi';
 import { StudyDialog } from '@/components/ui/StudyDialog';
 import { Button } from '@/components/ui/Button';
 import { confirmDiscard } from '@/lib/notifications';
@@ -52,6 +53,16 @@ export function RecordForm({
 }: Props) {
   const [record, setRecord] = useState(initialRecord);
   const [revision, setRevision] = useState(0);
+  const [extrasOpen, setExtrasOpen] = useState(
+    () =>
+      !!(
+        initialRecord?.startTime ||
+        initialRecord?.quantity ||
+        initialRecord?.quantityUnit ||
+        initialRecord?.memo
+      ),
+  );
+  const extrasRef = useRef<HTMLDetailsElement>(null);
   const [conflict, setConflict] = useState(false);
   const [latest, setLatest] = useState<StudyRecord | null>(null);
   const [error, setError] = useState('');
@@ -178,6 +189,10 @@ export function RecordForm({
     });
     if (!value.ok) {
       setFieldErrors(value.errors as Record<string, string>);
+      if (['startTime', 'quantity', 'quantityUnit', 'memo'].some((key) => key in value.errors)) {
+        setExtrasOpen(true);
+        if (extrasRef.current) extrasRef.current.open = true;
+      }
       setError('입력한 내용을 확인해주세요.');
       const first = Object.keys(value.errors)[0];
       const field = event.currentTarget.elements.namedItem(first);
@@ -237,6 +252,9 @@ export function RecordForm({
       setBusy(true);
       const current = await readOwnRecord(record.id, userId, groupId);
       setRecord(current);
+      setExtrasOpen(
+        !!(current.startTime || current.quantity || current.quantityUnit || current.memo),
+      );
       setLatest(null);
       setConflict(false);
       setUncertain(false);
@@ -278,7 +296,9 @@ export function RecordForm({
       title={record ? '공부 기록 수정' : '공부 기록 남기기'}
       onClose={() => void close()}
     >
-      <p className={styles.help}>공부한 날짜와 종류, 시간을 남겨주세요.</p>
+      <p className={styles.help}>
+        공부한 날짜와 종류, 시간을 남겨주세요. 기록은 스터디원과 함께 볼 수 있어요.
+      </p>
       {categories.isPending && <p role="status">공부 종류를 불러오고 있어요…</p>}
       {categories.isError && (
         <div>
@@ -339,75 +359,85 @@ export function RecordForm({
             </select>
             {fieldError('categoryId')}
           </label>
-          <div className={styles.row}>
-            <label className={styles.field}>
-              {fieldLabels.minutes}
-              <input
-                defaultValue={record?.minutes}
-                name="minutes"
-                type="number"
-                min="1"
-                max="1440"
-                step="1"
-                inputMode="numeric"
-                required
-                {...invalid('minutes')}
-              />
-              {fieldError('minutes')}
-            </label>
-            <label className={styles.field}>
-              {fieldLabels.startTime}
-              <input
-                defaultValue={record?.startTime ?? ''}
-                name="startTime"
-                type="time"
-                {...invalid('startTime')}
-              />
-              {fieldError('startTime')}
-            </label>
-          </div>
-          <div className={styles.row}>
-            <label className={styles.field}>
-              {fieldLabels.quantity}
-              <input
-                defaultValue={record?.quantity ?? ''}
-                name="quantity"
-                type="number"
-                min="1"
-                max="99999"
-                step="1"
-                inputMode="numeric"
-                {...invalid('quantity')}
-              />
-              {fieldError('quantity')}
-            </label>
-            <label className={styles.field}>
-              {fieldLabels.quantityUnit}
-              <select
-                name="quantityUnit"
-                defaultValue={record?.quantityUnit ?? ''}
-                {...invalid('quantityUnit')}
-              >
-                <option value="">선택 안 함</option>
-                <option value="item">개</option>
-                <option value="page">쪽</option>
-                <option value="question">문제</option>
-              </select>
-              {fieldError('quantityUnit')}
-            </label>
-          </div>
           <label className={styles.field}>
-            {fieldLabels.memo}
-            <textarea
-              defaultValue={record?.memo ?? ''}
-              name="memo"
-              rows={4}
-              maxLength={1000}
-              {...invalid('memo')}
+            {fieldLabels.minutes}
+            <input
+              defaultValue={record?.minutes}
+              name="minutes"
+              type="number"
+              min="1"
+              max="1440"
+              step="1"
+              inputMode="numeric"
+              required
+              {...invalid('minutes')}
             />
-            {fieldError('memo')}
+            {fieldError('minutes')}
           </label>
-          <p className={styles.help}>스터디원에게 공개됩니다.</p>
+          <details
+            ref={extrasRef}
+            open={extrasOpen}
+            onToggle={(event) => setExtrasOpen(event.currentTarget.open)}
+            className={styles.extraInfo}
+          >
+            <summary>
+              추가 정보 입력 <FiChevronDown aria-hidden="true" />
+            </summary>
+            <div className={styles.extraFields}>
+              <label className={styles.field}>
+                {fieldLabels.startTime}
+                <input
+                  defaultValue={record?.startTime ?? ''}
+                  name="startTime"
+                  type="time"
+                  {...invalid('startTime')}
+                />
+                {fieldError('startTime')}
+              </label>
+              <div className={styles.row}>
+                <label className={styles.field}>
+                  {fieldLabels.quantity}
+                  <input
+                    defaultValue={record?.quantity ?? ''}
+                    name="quantity"
+                    type="number"
+                    min="1"
+                    max="99999"
+                    step="1"
+                    inputMode="numeric"
+                    {...invalid('quantity')}
+                  />
+                  {fieldError('quantity')}
+                </label>
+                <label className={styles.field}>
+                  {fieldLabels.quantityUnit}
+                  <select
+                    name="quantityUnit"
+                    defaultValue={record?.quantityUnit ?? ''}
+                    {...invalid('quantityUnit')}
+                  >
+                    <option value="">선택 안 함</option>
+                    <option value="item">개</option>
+                    <option value="page">쪽</option>
+                    <option value="question">문제</option>
+                  </select>
+                  {fieldError('quantityUnit')}
+                </label>
+              </div>
+              <label className={styles.field}>
+                {fieldLabels.memo}
+                <textarea
+                  defaultValue={record?.memo ?? ''}
+                  name="memo"
+                  rows={3}
+                  placeholder="예: 오늘 외운 단어 20개, 어려웠던 문법"
+                  maxLength={1000}
+                  {...invalid('memo')}
+                />
+                {fieldError('memo')}
+              </label>
+            </div>
+          </details>
         </fieldset>
         {error && (
           <p role="alert" className={styles.error}>

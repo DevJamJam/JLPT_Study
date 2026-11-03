@@ -1,3 +1,4 @@
+import { expandRecordExtras } from './record-fixture';
 import { test, expect, type Page } from '@playwright/test';
 import { separatedShell } from './layout-assertions';
 
@@ -238,6 +239,7 @@ test('뒤로가기 초안 유지·폐기와 제출 중 이탈 방지를 공유�
   const state = await setup(page);
   await page.getByRole('button', { name: '새 공부 기록', exact: true }).click();
   const form = page.getByRole('form', { name: '공부 기록 입력' });
+  await expandRecordExtras(form);
   await form.getByRole('textbox', { name: '메모 (선택)', exact: true }).fill('유지할 초안');
   await page.goBack();
   await page.getByRole('button', { name: '계속 작성', exact: true }).click();
@@ -257,6 +259,7 @@ test('뒤로가기 초안 유지·폐기와 제출 중 이탈 방지를 공유�
   release();
   await expect(form).toHaveCount(0);
   await page.getByRole('button', { name: '새 공부 기록', exact: true }).click();
+  await expandRecordExtras(form);
   await form.getByRole('textbox', { name: '메모 (선택)', exact: true }).fill('폐기할 초안');
   await page.goBack();
   await page.getByRole('button', { name: '버리기', exact: true }).click();
