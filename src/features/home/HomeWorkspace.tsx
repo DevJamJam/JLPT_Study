@@ -192,8 +192,8 @@ function Home({ userId, groupId, emoji, nickname, ref }: Props) {
                 <ul className={styles.participants} aria-label="오늘 공부한 멤버">
                   {data.todayParticipants.map((member) => (
                     <li className={styles.participant} key={member.id}>
-                      <span aria-hidden="true">{member.id === userId ? emoji : member.emoji}</span>
-                      <span>{member.id === userId ? nickname : member.nickname}</span>
+                      <span aria-hidden="true">{member.emoji}</span>
+                      <span>{member.nickname}</span>
                     </li>
                   ))}
                 </ul>
@@ -202,7 +202,7 @@ function Home({ userId, groupId, emoji, nickname, ref }: Props) {
                 </p>
               </>
             ) : (
-              <p className={shared.empty}>아직 오늘 공부한 멤버가 없어요. 첫 기록을 남겨 보아요.</p>
+              <p className={shared.empty}>아직 오늘 공부한 다른 멤버가 없어요.</p>
             )}
           </>
         ) : (

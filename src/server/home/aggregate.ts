@@ -11,7 +11,9 @@ export function homeTotals(
   const weekStart = monday(today);
   const month = today.slice(0, 7);
   const mine = records.filter((record) => record.userId === actorId && record.studyDate <= today);
-  const todayRecords = records.filter((record) => record.studyDate === today);
+  const todayRecords = records.filter(
+    (record) => record.studyDate === today && record.userId !== actorId,
+  );
   const participants = new Set(todayRecords.map((record) => record.userId));
   const sum = (rows: CalendarRecord[]) => rows.reduce((total, record) => total + record.minutes, 0);
   return {

@@ -41,17 +41,8 @@ async function setup(page: Page) {
           todayMinutes: minutes,
           weekMinutes: minutes,
           monthMinutes: minutes,
-          groupTodayMinutes: minutes,
-          todayParticipants: minutes
-            ? [
-                {
-                  id: userId,
-                  nickname: session.profile.nickname,
-                  emoji: '🐰',
-                  joinedAt: '2026-11-03T00:00:00Z',
-                },
-              ]
-            : [],
+          groupTodayMinutes: 0,
+          todayParticipants: [],
           recentRecords: state.records.slice(0, 5),
         },
       },
@@ -119,7 +110,10 @@ test('홈 빈 상태·기록 저장·상세·수정·새로고침이 같은 실�
   await form.getByRole('button', { name: '기록 저장', exact: true }).click();
   await expect(form).toHaveCount(0);
   await expect(metrics(page)).toContainText('45분');
-  await expect(page.getByLabel('오늘 공부한 멤버')).toContainText('화면검증토끼');
+  await expect(page.getByLabel('오늘 공부한 멤버')).toHaveCount(0);
+  await expect(
+    page.getByText('아직 오늘 공부한 다른 멤버가 없어요.', { exact: true }),
+  ).toBeVisible();
   const recent = page.getByRole('button', { name: `${today} 단어 45분 기록 보기`, exact: true });
   await expect(recent).toContainText('시작 09:00');
   await expect(recent).toContainText('2쪽');
@@ -231,18 +225,20 @@ test('홈의 긴 종류명·참여 멤버15명·최근5개도 가로 넘침이�
           todayMinutes: 450,
           weekMinutes: 450,
           monthMinutes: 450,
-          groupTodayMinutes: 900,
-          todayParticipants: participants,
+          groupTodayMinutes: 450,
+          todayParticipants: participants.filter((member) => member.id !== userId),
           recentRecords: records,
         },
       },
     }),
   );
   await page.getByRole('button', { name: '홈 새로고침', exact: true }).click();
-  await expect(page.getByLabel('오늘 공부한 멤버').getByRole('listitem')).toHaveCount(15);
+  await expect(page.getByLabel('오늘 공부한 멤버').getByRole('listitem')).toHaveCount(14);
   await expect(
     page.getByRole('button', { name: /긴공부종류이름을등록한상태.*기록 보기/ }),
   ).toHaveCount(5);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await expect(page.getByLabel('오늘 공부한 멤버')).not.toContainText('화면검증토끼');
+  await expect(page.getByText('함께 공부한 시간 · 7시간 30분')).toBeVisible();
   await captureShellScroll(page, info.project.name, 'home-members');
 });
