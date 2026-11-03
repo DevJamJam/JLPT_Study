@@ -214,3 +214,26 @@ test('관리자 세션 만료는 로그인으로 이동하고 일반 ADMIN 가�
   await page.getByRole('button', { name: '공부방 시작하기' }).click();
   await expect(page.getByRole('main').getByRole('alert')).toContainText('관리자 전용');
 });
+
+test('관리자 로그인·종류 빈 입력도 한국어로 안내하고 변경 요청을 보내지 않는다', async ({
+  page,
+}) => {
+  await setup(page);
+  let writes = 0;
+  await page.route('**/api/admin/auth/login', (route) => {
+    writes++;
+    return route.fulfill({ status: 400, json: { error: { code: 'VALIDATION_ERROR' } } });
+  });
+  await page.goto('/admin/login');
+  await page.getByRole('button', { name: '로그인', exact: true }).click();
+  await expect(
+    page.getByText('관리자 아이디와 12자 이상의 비밀번호를 입력해주세요.', { exact: true }),
+  ).toBeVisible();
+  expect(writes).toBe(0);
+  await page.goto('/admin/categories');
+  await page.getByRole('button', { name: '종류 추가', exact: true }).click();
+  await expect(
+    page.getByText('공부 종류 이름은 1~20자로 입력해주세요.', { exact: true }),
+  ).toBeVisible();
+  expect(await page.locator('article').count()).toBe(7);
+});

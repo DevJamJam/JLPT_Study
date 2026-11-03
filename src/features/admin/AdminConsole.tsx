@@ -109,6 +109,10 @@ function Workspace({ view }: { view: View }) {
   }
   function login(event: FormEvent) {
     event.preventDefault();
+    if (!loginId.trim() || [...password].length < 12) {
+      setError('관리자 아이디와 12자 이상의 비밀번호를 입력해주세요.');
+      return;
+    }
     void perform(async () => {
       await jsonRequest('/api/admin/auth/login', { loginId, password });
       setPassword('');
@@ -118,6 +122,11 @@ function Workspace({ view }: { view: View }) {
   }
   function saveCategory(event: FormEvent) {
     event.preventDefault();
+    const length = [...name.trim().normalize('NFC')].length;
+    if (length < 1 || length > 20) {
+      setError('공부 종류 이름은 1~20자로 입력해주세요.');
+      return;
+    }
     void perform(async () => {
       if (editing)
         await jsonRequest(
@@ -212,7 +221,7 @@ function Workspace({ view }: { view: View }) {
             </span>
             <h1 id="admin-title">관리자 로그인</h1>
             <p className={styles.muted}>공부방을 관리하는 공간이에요.</p>
-            <form onSubmit={login} aria-busy={busy}>
+            <form noValidate onSubmit={login} aria-busy={busy}>
               <fieldset disabled={busy} className={styles.fields}>
                 <label className={styles.field}>
                   관리자 아이디
@@ -286,7 +295,12 @@ function Workspace({ view }: { view: View }) {
                 {view === 'categories' ? (
                   <section className={styles.card} aria-labelledby="category-form-title">
                     <h2 id="category-form-title">{editing ? '공부 종류 수정' : '새 공부 종류'}</h2>
-                    <form onSubmit={saveCategory} aria-busy={busy} className={styles.categoryForm}>
+                    <form
+                      noValidate
+                      onSubmit={saveCategory}
+                      aria-busy={busy}
+                      className={styles.categoryForm}
+                    >
                       <label className={styles.field}>
                         종류 이름
                         <input
