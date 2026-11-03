@@ -51,9 +51,9 @@ test('홈은 월·연도 경계를 넘는 주간 합계, 본인 합계와 오늘
     weekStart: '2025-12-29',
     weekMinutes: 90,
     monthMinutes: 30,
-    groupTodayMinutes: 70,
+    groupTodayMinutes: 40,
   });
-  expect(result.todayParticipants.map((m) => m.id)).toEqual([peer, user]);
+  expect(result.todayParticipants.map((m) => m.id)).toEqual([peer]);
   expect(homeTotals('2024-03-01', user, [row(20, user, '2024-02-29', 30)], members)).toMatchObject({
     todayMinutes: 0,
     weekMinutes: 30,
@@ -169,10 +169,10 @@ test('홈 API는 작은 DB 반환 상한도 모두 합산하고 최근5개·공�
     todayMinutes: 106,
     weekMinutes: 106,
     monthMinutes: 106,
-    groupTodayMinutes: 107,
+    groupTodayMinutes: 1,
   });
   expect(data.recentRecords).toHaveLength(5);
-  expect(data.todayParticipants.map((m: { id: string }) => m.id)).toEqual([peer, user]);
+  expect(data.todayParticipants.map((m: { id: string }) => m.id)).toEqual([peer]);
   expect(JSON.stringify(data)).not.toContain('PRIVATE');
   const aggregate = f.calls.find((u) => u.searchParams.has('or'))!;
   expect(aggregate.searchParams.get('group_id')).toBe(`eq.${group}`);
@@ -200,4 +200,28 @@ test('홈 API는 임의 조회 조건·무인증·관리자·제한 세션과 �
     expect(response.status).toBe(503);
     expect(await response.text()).not.toContain('PRIVATE');
   }
+});
+
+test('오늘 본인만 공부했으면 동료 목록과 합계는 비어 있고 내 합계는 유지한다', () => {
+  expect(
+    homeTotals(
+      '2026-11-03',
+      user,
+      [{ id: id(99), userId: user, studyDate: '2026-11-03', minutes: 40 }],
+      members,
+    ),
+  ).toMatchObject({
+    todayMinutes: 40,
+    weekMinutes: 40,
+    groupTodayMinutes: 0,
+    todayParticipants: [],
+  });
+  expect(
+    homeTotals(
+      '2026-11-03',
+      user,
+      [{ id: id(98), userId: peer, studyDate: '2026-11-03', minutes: 25 }],
+      members,
+    ),
+  ).toMatchObject({ todayMinutes: 0, groupTodayMinutes: 25, todayParticipants: [members[0]] });
 });
