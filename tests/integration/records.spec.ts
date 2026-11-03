@@ -416,11 +416,9 @@ test('실제 홈 요약은100행 상한·본인/그룹 범위·월 경계·최�
     todayMinutes: 134,
     weekMinutes: 134,
     monthMinutes: 134 + (previous.slice(0, 7) === today.slice(0, 7) ? 10 : 0),
-    groupTodayMinutes: 154,
+    groupTodayMinutes: 20,
   });
-  expect(data.todayParticipants.map((m: { id: string }) => m.id).sort()).toEqual(
-    [user, peer].sort(),
-  );
+  expect(data.todayParticipants.map((m: { id: string }) => m.id).sort()).toEqual([peer]);
   expect(data.recentRecords).toHaveLength(5);
   expect(
     data.recentRecords.every(
@@ -438,9 +436,9 @@ test('실제 홈 요약은100행 상한·본인/그룹 범위·월 경계·최�
     recordId,
   );
   expect(changed.status).toBe(200);
-  expect(
-    (await (await http.summary(req('', undefined, summaryToken))).json()).data.todayMinutes,
-  ).toBe(149);
+  const updatedSummary = (await (await http.summary(req('', undefined, summaryToken))).json()).data;
+  expect(updatedSummary.todayMinutes).toBe(149);
+  expect(updatedSummary.groupTodayMinutes).toBe(20);
   expect((await http.summary(req('', undefined, limitedToken))).status).toBe(403);
 });
 
