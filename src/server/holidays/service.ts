@@ -28,7 +28,7 @@ export async function fetchHolidayYear(
   transport: typeof fetch = fetch,
 ): Promise<HolidayYear> {
   try {
-    if (!/^\d{4}$/.test(year) || !key?.trim() || key.length > 2048 || /\s/.test(key))
+    if (!/^\d{4}$/.test(year) || !serviceKey || serviceKey.length > 2048 || /\s/.test(serviceKey))
       throw new HolidayError();
     const holidays: Record<string, string[]> = {};
     let total: number | undefined;
@@ -38,7 +38,7 @@ export async function fetchHolidayYear(
         'https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo',
       );
       url.search = new URLSearchParams({
-        serviceKey: key,
+        serviceKey,
         solYear: year,
         _type: 'json',
         numOfRows: '100',

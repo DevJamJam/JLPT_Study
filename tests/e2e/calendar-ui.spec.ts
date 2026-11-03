@@ -178,7 +178,7 @@ async function setup(page: Page, url = '/calendar', crowded: boolean | number = 
   });
   await page.goto(url);
   await expect(page.getByRole('button', { name: '달력 새로고침' })).toBeVisible();
-  await expect(page.locator(`[data-date="${today}"]`)).toBeEnabled();
+  await expect(page.getByTestId('live-month-grid').locator('button').first()).toBeEnabled();
   return { state, records, members };
 }
 const day = (page: Page, date = today) => page.locator(`[data-date="${date}"]`);
