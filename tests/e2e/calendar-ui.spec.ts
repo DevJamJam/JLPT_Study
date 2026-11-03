@@ -174,6 +174,11 @@ test('월간42칸·15명 축약·개인 보기·공통 메뉴를 실제 데이�
   await setup(page, '/calendar', true);
   await expect(page.getByTestId('live-month-grid').locator('button')).toHaveCount(42);
   const main = await captureShellScroll(page, info.project.name, 'calendar');
+  if (info.project.name !== 'SE3') {
+    await expect
+      .poll(() => main.evaluate((element) => element.scrollHeight - element.clientHeight))
+      .toBeLessThanOrEqual(1);
+  }
   const lastDate = page.getByTestId('live-month-grid').locator('button').last();
   const lastBounds = (await lastDate.boundingBox())!;
   const mainBounds = (await main.boundingBox())!;

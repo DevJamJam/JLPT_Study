@@ -114,6 +114,6 @@
   }
   .monthGrid {
     flex: 1;
-    grid-auto-rows: minmax(min-content, 1fr);
+    grid-auto-rows: auto;
   }
 }
