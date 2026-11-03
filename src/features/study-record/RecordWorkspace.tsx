@@ -201,14 +201,31 @@ function Records({
           {records.map((record, index) => (
             <Fragment key={record.id}>
               {(index === 0 || records[index - 1].studyDate !== record.studyDate) && (
-                <h4 className={styles.dateHeading}>{record.studyDate.replaceAll('-', '. ')}</h4>
+                <h4 className={styles.dateHeading}>
+                  <time dateTime={record.studyDate}>{record.studyDate.replaceAll('-', '. ')}</time>
+                </h4>
               )}
               <article className={styles.record} key={record.id}>
                 <div className={styles.recordHeading}>
                   <strong>
                     {record.categoryName} · {record.minutes}분
                   </strong>
-                  <time dateTime={record.studyDate}>{record.studyDate.replaceAll('-', '. ')}</time>
+                  {record.userId === userId && (
+                    <div className={styles.recordActions}>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setPanel({ kind: 'edit', record })}
+                      >
+                        수정
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setPanel({ kind: 'delete', record })}
+                      >
+                        삭제
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 {record.startTime && <p className={styles.help}>시작 {record.startTime}</p>}
                 {record.quantity && (
@@ -218,16 +235,6 @@ function Records({
                   </p>
                 )}
                 {record.memo && <p>{record.memo}</p>}
-                {record.userId === userId && (
-                  <div className={styles.recordActions}>
-                    <Button variant="quiet" onClick={() => setPanel({ kind: 'edit', record })}>
-                      수정
-                    </Button>
-                    <Button variant="quiet" onClick={() => setPanel({ kind: 'delete', record })}>
-                      삭제
-                    </Button>
-                  </div>
-                )}
               </article>
             </Fragment>
           ))}

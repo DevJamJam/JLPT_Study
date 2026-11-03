@@ -126,7 +126,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 12px;
+  flex-shrink: 0;
 }
 .conflict {
   padding: 16px;
@@ -146,4 +146,14 @@
   margin: 24px 0 0;
   font-size: 14px;
   color: var(--muted);
+}
+
+.recordHeading {
+  flex-wrap: nowrap;
+}
+.recordHeading strong {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
