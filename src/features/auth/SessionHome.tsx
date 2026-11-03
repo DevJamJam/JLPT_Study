@@ -144,6 +144,7 @@ export function SessionHome({ initialView = 'home' }: { initialView?: MainView }
           />
         ) : (
           <RecordWorkspace
+            emoji={session.profile.emoji}
             ref={workspace}
             key={`${session.profile.id}:${session.group.id}`}
             userId={session.profile.id}

@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useImperativeHandle, useState, type Ref } from 'react';
+import { useEffect, useImperativeHandle, useState, Fragment, type Ref } from 'react';
 import {
   QueryClient,
   QueryClientProvider,
   useInfiniteQuery,
+  useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
 import type { AddRecordHandle } from '../calendar/navigation';
@@ -12,16 +13,21 @@ import { Button } from '@/components/ui/Button';
 import { PeriodPicker } from '@/components/ui/PeriodPicker';
 import { seoulDateKey } from '@/lib/seoul-date';
 import { toast } from '@/lib/notifications';
-import { AuthClientError } from '../auth/client';
+import { expiredQuery } from '../calendar/client';
+import { dashboardRequest } from '../dashboard/client';
+import { MonthDashboard } from '../dashboard/MonthDashboard';
 import { RecordDelete } from './RecordDelete';
 import { RecordForm } from './RecordForm';
 import { recordsRequest } from './client';
 import type { StudyRecord } from './types';
+import { useSearchParams } from 'next/navigation';
+import { isDateKey } from '@/lib/seoul-date';
 import styles from './RecordWorkspace.module.css';
 
 export function RecordWorkspace(props: {
   userId: string;
   groupId: string;
+  emoji: string;
   ref?: Ref<AddRecordHandle>;
 }) {
   const [client] = useState(() => new QueryClient());
@@ -35,14 +41,30 @@ export function RecordWorkspace(props: {
 function Records({
   userId,
   groupId,
+  emoji,
   ref,
 }: {
   userId: string;
   groupId: string;
+  emoji: string;
   ref?: Ref<AddRecordHandle>;
 }) {
   const [today, setToday] = useState(seoulDateKey);
-  const [month, setMonth] = useState(() => seoulDateKey().slice(0, 7));
+  const params = useSearchParams();
+  const validMonth = (value: string | null) =>
+    value &&
+    /^\d{4}-\d{2}$/.test(value) &&
+    isDateKey(`${value}-01`) &&
+    value >= '2000-01' &&
+    value <= today.slice(0, 7)
+      ? value
+      : today.slice(0, 7);
+  const [month, setMonth] = useState(() => validMonth(params.get('month')));
+  useEffect(() => {
+    const next = new URL(window.location.href);
+    next.searchParams.set('month', month);
+    window.history.replaceState(window.history.state, '', next);
+  }, [month]);
   const [panel, setPanel] = useState<
     { kind: 'new' } | { kind: 'edit' | 'delete'; record: StudyRecord } | null
   >(null);
@@ -82,11 +104,18 @@ function Records({
     retry: false,
   });
   const records = query.data?.pages.flatMap((page) => page.records) ?? [];
-  const expired =
-    query.error instanceof AuthClientError &&
-    (query.error.status === 401 ||
-      query.error.code === 'PIN_CHANGE_REQUIRED' ||
-      query.error.code === 'ACCOUNT_CHANGED');
+  const dashboard = useQuery({
+    queryKey: ['records', userId, groupId, 'dashboard', month],
+    queryFn: ({ signal }) => dashboardRequest(month, userId, groupId, signal),
+    staleTime: 0,
+    retry: false,
+  });
+  const expired = expiredQuery(query.error) || expiredQuery(dashboard.error);
+  const busy = query.isFetching || dashboard.isFetching;
+  const refresh = () => {
+    void query.refetch();
+    void dashboard.refetch();
+  };
   function move(direction: number) {
     const date = new Date(`${month}-01T00:00:00Z`);
     date.setUTCMonth(date.getUTCMonth() + direction);
@@ -122,16 +151,16 @@ function Records({
         nextDisabled={month >= today.slice(0, 7)}
       />
       <div className={styles.actions}>
-        <Button variant="quiet" disabled={query.isFetching} onClick={() => void query.refetch()}>
+        <Button variant="quiet" disabled={busy} onClick={refresh}>
           기록 새로고침
         </Button>
-        {query.isFetching && (
+        {busy && (
           <span role="status" className={styles.help}>
             기록을 확인하고 있어요…
           </span>
         )}
       </div>
-      {query.isError && (
+      {(query.isError || dashboard.isError) && (
         <div>
           <p role="alert" className={styles.error}>
             {expired
@@ -145,47 +174,62 @@ function Records({
           )}
           <Button
             variant="quiet"
-            disabled={query.isFetching}
-            onClick={() =>
-              void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch())
-            }
+            disabled={busy}
+            onClick={() => {
+              void (query.isFetchNextPageError ? query.fetchNextPage() : query.refetch());
+              void dashboard.refetch();
+            }}
           >
             기록 다시 불러오기
           </Button>
         </div>
       )}
+      {!expired && dashboard.data?.month === month && (
+        <MonthDashboard data={dashboard.data} emoji={emoji} />
+      )}
+      {!expired && dashboard.isPending && (
+        <p role="status" className={styles.help}>
+          월간 통계를 확인하고 있어요…
+        </p>
+      )}
       {!expired && (
         <div className={styles.list}>
+          <h3 className={styles.listTitle}>남긴 기록</h3>
           {query.isSuccess && !records.length && (
             <p className={styles.empty}>아직 이달에 남긴 기록이 없어요.</p>
           )}
-          {records.map((record) => (
-            <article className={styles.record} key={record.id}>
-              <div className={styles.recordHeading}>
-                <strong>
-                  {record.categoryName} · {record.minutes}분
-                </strong>
-                <time dateTime={record.studyDate}>{record.studyDate.replaceAll('-', '. ')}</time>
-              </div>
-              {record.startTime && <p className={styles.help}>시작 {record.startTime}</p>}
-              {record.quantity && (
-                <p className={styles.help}>
-                  {record.quantity}
-                  {({ item: '개', page: '쪽', question: '문제' } as const)[record.quantityUnit!]}
-                </p>
+          {records.map((record, index) => (
+            <Fragment key={record.id}>
+              {(index === 0 || records[index - 1].studyDate !== record.studyDate) && (
+                <h4 className={styles.dateHeading}>{record.studyDate.replaceAll('-', '. ')}</h4>
               )}
-              {record.memo && <p>{record.memo}</p>}
-              {record.userId === userId && (
-                <div className={styles.recordActions}>
-                  <Button variant="quiet" onClick={() => setPanel({ kind: 'edit', record })}>
-                    수정
-                  </Button>
-                  <Button variant="quiet" onClick={() => setPanel({ kind: 'delete', record })}>
-                    삭제
-                  </Button>
+              <article className={styles.record} key={record.id}>
+                <div className={styles.recordHeading}>
+                  <strong>
+                    {record.categoryName} · {record.minutes}분
+                  </strong>
+                  <time dateTime={record.studyDate}>{record.studyDate.replaceAll('-', '. ')}</time>
                 </div>
-              )}
-            </article>
+                {record.startTime && <p className={styles.help}>시작 {record.startTime}</p>}
+                {record.quantity && (
+                  <p className={styles.help}>
+                    {record.quantity}
+                    {({ item: '개', page: '쪽', question: '문제' } as const)[record.quantityUnit!]}
+                  </p>
+                )}
+                {record.memo && <p>{record.memo}</p>}
+                {record.userId === userId && (
+                  <div className={styles.recordActions}>
+                    <Button variant="quiet" onClick={() => setPanel({ kind: 'edit', record })}>
+                      수정
+                    </Button>
+                    <Button variant="quiet" onClick={() => setPanel({ kind: 'delete', record })}>
+                      삭제
+                    </Button>
+                  </div>
+                )}
+              </article>
+            </Fragment>
           ))}
           {query.hasNextPage && (
             <Button

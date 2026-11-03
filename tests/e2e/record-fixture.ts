@@ -27,6 +27,23 @@ export async function stubRecordReads(page: Page) {
   await page.route(/\/api\/records\?/, (route) =>
     route.fulfill({ json: { data: { records: [], nextCursor: null } } }),
   );
+  await page.route('**/api/me/dashboard?**', (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          userId: '00000000-0000-4000-8000-000000000001',
+          groupId: '00000000-0000-4000-8000-000000000002',
+          month: new URL(route.request().url()).searchParams.get('month'),
+          totalMinutes: 0,
+          studyDays: 0,
+          recordCount: 0,
+          averageMinutes: 0,
+          longestMinutes: 0,
+          categories: [],
+        },
+      },
+    }),
+  );
   await page.route('**/api/categories', (route) =>
     route.fulfill({ json: { data: { categories: [] } } }),
   );

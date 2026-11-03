@@ -11,6 +11,8 @@ import { parseStudyWeek } from '../study/query';
 import { adminTokenHash, createAdminHttp } from '../admin/http';
 import { seoulDateKey } from '../../lib/seoul-date';
 
+import { monthSummary } from '../dashboard/aggregate';
+
 const messages: Record<string, string> = {
   VALIDATION_ERROR: '공부 기록의 입력과 조회 조건을 확인해주세요.',
   IDEMPOTENCY_CONFLICT: '저장 요청 내용이 바뀌었어요. 새 요청으로 다시 시도해주세요.',
@@ -32,6 +34,7 @@ export function createRecordsHttp(
       | 'categories'
       | 'members'
       | 'calendar'
+      | 'dashboard'
       | 'summary'
       | 'study',
     request: NextRequest,
@@ -65,6 +68,33 @@ export function createRecordsHttp(
           return json({ data: await mutateRecord(action, id, body, hash, db) });
         const session = await db.resolveSession(hash);
         if (session.profile.mustChangePin) throw new RecordRequestError(403, 'PIN_CHANGE_REQUIRED');
+        if (action === 'dashboard') {
+          const params = request.nextUrl.searchParams;
+          if (params.size !== 1 || params.getAll('month').length !== 1)
+            throw new RecordRequestError(400, 'VALIDATION_ERROR');
+          const input = parseRecordQuery(
+            new URLSearchParams({ scope: 'mine', month: params.get('month')! }),
+            session.profile.id,
+            session.group.id,
+          );
+          const [{ records }, categories] = await Promise.all([
+            db.listRecords(
+              { kind: 'period', scope: 'mine', from: input.from, to: input.to },
+              session.profile.id,
+              session.group.id,
+            ),
+            db.listCategories(),
+          ]);
+          return json({
+            data: monthSummary(
+              params.get('month')!,
+              session.profile.id,
+              session.group.id,
+              records,
+              categories,
+            ),
+          });
+        }
         if (action === 'summary') {
           if (request.nextUrl.searchParams.size)
             throw new RecordRequestError(400, 'VALIDATION_ERROR');
@@ -145,6 +175,7 @@ export function createRecordsHttp(
     list: (request: NextRequest) => handle('list', request),
     members: (request: NextRequest) => handle('members', request),
     study: (request: NextRequest) => handle('study', request),
+    dashboard: (request: NextRequest) => handle('dashboard', request),
     summary: (request: NextRequest) => handle('summary', request),
     calendar: (request: NextRequest) => handle('calendar', request),
     categories: (request: NextRequest) => handle('categories', request),

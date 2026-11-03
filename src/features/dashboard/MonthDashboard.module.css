@@ -1,0 +1,41 @@
+.secondary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin: 20px 0 8px;
+}
+.secondary div {
+  min-width: 0;
+}
+.secondary dt,
+.help {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.secondary dd {
+  margin: 6px 0 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.help {
+  margin: 8px 0 20px;
+}
+.chart {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+}
+.chart h3 {
+  margin: 0 0 20px;
+  font-size: 18px;
+}
+.chartRow > div {
+  align-items: baseline;
+}
+.chartRow > div > span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.chartRow > div > span:last-child {
+  flex-shrink: 0;
+}
