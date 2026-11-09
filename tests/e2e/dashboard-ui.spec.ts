@@ -105,6 +105,7 @@ async function setup(page: Page, initial: StudyRecord[]) {
   await expect(page.getByRole('region', { name: '월간 공부 통계' })).toBeVisible();
   return state;
 }
+const categoryTimes = (page: Page) => page.getByRole('region', { name: '공부 종류별 시간' });
 const stats = (page: Page) => page.getByRole('region', { name: '월간 공부 통계' });
 async function captureTop(page: Page, path: string) {
   await page.locator('main').evaluate((el) => (el.scrollTop = 0));
@@ -126,7 +127,8 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await setup(page, rows);
   await expect(stats(page)).toContainText('17시간');
   await expect(stats(page)).toContainText('33개');
-  await expect(stats(page).getByRole('progressbar')).toHaveCount(2);
+  await expect(categoryTimes(page).locator('dt')).toHaveText(['단어', categories[1].name]);
+  await expect(categoryTimes(page).locator('dd')).toHaveText(['15시간 30분', '1시간 30분']);
   await expect(stats(page).getByText('청해', { exact: true })).toHaveCount(0);
   await expect(stats(page)).toContainText('2일');
   await expect(stats(page)).toContainText('8시간 30분');
@@ -134,9 +136,7 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await expect(page.locator('article')).toHaveCount(30);
   await captureTop(page, `test-results/${info.project.name}-dashboard-populated.png`);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await stats(page)
-    .getByRole('progressbar', { name: categories[1].name + ' 공부 시간', exact: true })
-    .scrollIntoViewIfNeeded();
+  await categoryTimes(page).scrollIntoViewIfNeeded();
   await page.screenshot({ path: `test-results/${info.project.name}-dashboard-categories.png` });
   await page.getByRole('button', { name: '기록 더 보기', exact: true }).click();
   await expect(page.locator('article')).toHaveCount(33);
@@ -144,7 +144,7 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await page.getByRole('button', { name: '이전 달', exact: true }).click();
   await expect(page).toHaveURL(/month=2026-09/);
   await expect(stats(page)).toContainText('0개');
-  await expect(stats(page).getByRole('progressbar')).toHaveCount(0);
+  await expect(categoryTimes(page).locator('dt')).toHaveCount(0);
   await expect(stats(page).getByText('이 달에 남긴 공부 기록이 없어요.')).toBeVisible();
   await expect(page.locator('article')).toHaveCount(0);
   await captureTop(page, `test-results/${info.project.name}-dashboard-empty.png`);
@@ -152,7 +152,7 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await expect(page.getByText('2026년 9월', { exact: true })).toBeVisible();
 });
 
-test('추가·수정·마지막 삭제는 카드·하루 합계·종류 막대를 즉시 갱신한다', async ({ page }) => {
+test('추가·수정·마지막 삭제는 카드·하루 합계·종류별 시간을 즉시 갱신한다', async ({ page }) => {
   await setup(page, [{ ...base }]);
   await page.getByRole('button', { name: '공부 기록 남기기', exact: true }).click();
   const form = page.getByRole('form', { name: '공부 기록 입력' });
@@ -164,9 +164,7 @@ test('추가·수정·마지막 삭제는 카드·하루 합계·종류 막대�
   await page.getByRole('button', { name: '수정', exact: true }).first().click();
   await form.getByRole('spinbutton', { name: '공부 시간 (분)', exact: true }).fill('60');
   await form.getByRole('button', { name: '수정 저장', exact: true }).click();
-  await expect(
-    stats(page).getByRole('progressbar', { name: '단어 공부 시간', exact: true }),
-  ).toHaveAttribute('value', '90');
+  await expect(categoryTimes(page).locator('dd')).toHaveText(['1시간 30분']);
   for (const count of [1, 0]) {
     await page.getByRole('button', { name: '삭제', exact: true }).first().click();
     await page
@@ -177,7 +175,7 @@ test('추가·수정·마지막 삭제는 카드·하루 합계·종류 막대�
     await expect(stats(page)).toContainText(`${count}개`);
   }
   await expect(stats(page)).toContainText('0일');
-  await expect(stats(page).getByRole('progressbar')).toHaveCount(0);
+  await expect(categoryTimes(page).locator('dt')).toHaveCount(0);
   await expect(stats(page).getByText('이 달에 남긴 공부 기록이 없어요.')).toBeVisible();
 });
 

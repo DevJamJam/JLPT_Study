@@ -2,7 +2,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 16px;
-  margin: 20px 0 8px;
+  margin: 20px 0;
 }
 .secondary div {
   min-width: 0;
@@ -21,21 +21,35 @@
 .help {
   margin: 8px 0 20px;
 }
-.chart {
+.categoryTimes {
   border-top: 1px solid var(--border);
   padding-top: 20px;
 }
-.chart h3 {
-  margin: 0 0 20px;
+.categoryTimes h3 {
+  margin: 0 0 8px;
   font-size: 18px;
 }
-.chartRow > div {
-  align-items: baseline;
+.times {
+  margin: 0;
+  font-size: 14px;
 }
-.chartRow > div > span:first-child {
+.times > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+}
+.times > div + div {
+  border-top: 1px solid var(--border);
+}
+.times dt {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.chartRow > div > span:last-child {
+.times dd {
   flex-shrink: 0;
+  margin: 0;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
 }

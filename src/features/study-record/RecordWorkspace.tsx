@@ -27,7 +27,6 @@ import styles from './RecordWorkspace.module.css';
 export function RecordWorkspace(props: {
   userId: string;
   groupId: string;
-  emoji: string;
   ref?: Ref<AddRecordHandle>;
 }) {
   const [client] = useState(() => new QueryClient());
@@ -41,12 +40,10 @@ export function RecordWorkspace(props: {
 function Records({
   userId,
   groupId,
-  emoji,
   ref,
 }: {
   userId: string;
   groupId: string;
-  emoji: string;
   ref?: Ref<AddRecordHandle>;
 }) {
   const [today, setToday] = useState(seoulDateKey);
@@ -184,9 +181,7 @@ function Records({
           </Button>
         </div>
       )}
-      {!expired && dashboard.data?.month === month && (
-        <MonthDashboard data={dashboard.data} emoji={emoji} />
-      )}
+      {!expired && dashboard.data?.month === month && <MonthDashboard data={dashboard.data} />}
       {!expired && dashboard.isPending && (
         <p role="status" className={styles.help}>
           월간 통계를 확인하고 있어요…
