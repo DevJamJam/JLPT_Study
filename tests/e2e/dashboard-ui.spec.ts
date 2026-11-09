@@ -126,7 +126,7 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   }));
   await setup(page, rows);
   const summary = page.getByRole('region', { name: '월간 요약', exact: true });
-  await expect(summary.getByText('공부한 날의 하루 평균')).toBeVisible();
+  await expect(summary.getByText('하루 평균 공부시간')).toBeVisible();
   const summaryBox = (await summary.boundingBox())!;
   const categoriesBox = (await categoryTimes(page).boundingBox())!;
   if (info.project.name === 'SE3') {

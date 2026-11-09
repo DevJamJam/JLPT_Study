@@ -23,11 +23,11 @@ export function MonthDashboard({ data }: { data: MonthSummary }) {
               <dd>{data.recordCount}개</dd>
             </div>
             <div>
-              <dt>공부한 날의 하루 평균</dt>
+              <dt>하루 평균 공부시간</dt>
               <dd>{duration(data.averageMinutes)}</dd>
             </div>
             <div>
-              <dt>가장 오래 공부한 하루</dt>
+              <dt>오래 공부한 하루</dt>
               <dd>{duration(data.longestMinutes)}</dd>
             </div>
           </dl>
