@@ -38,6 +38,7 @@
   border-top-color: var(--border);
 }
 .rows dt {
+  word-break: keep-all;
   overflow-wrap: anywhere;
 }
 .rows dd {
