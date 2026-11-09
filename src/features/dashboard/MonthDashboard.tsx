@@ -6,6 +6,7 @@ import shared from '@/styles/notebook.module.css';
 import styles from './MonthDashboard.module.css';
 
 export function MonthDashboard({ data, emoji }: { data: MonthSummary; emoji: string }) {
+  const recordedCategories = data.categories.filter(({ minutes }) => minutes > 0);
   return (
     <section
       aria-label="월간 공부 통계"
@@ -29,8 +30,8 @@ export function MonthDashboard({ data, emoji }: { data: MonthSummary; emoji: str
       <p className={styles.help}>하루 평균은 공부한 날 기준으로 계산하고, 분 단위로 반올림해요.</p>
       <section aria-labelledby="category-chart-title" className={styles.chart}>
         <h3 id="category-chart-title">공부 종류별 시간</h3>
-        {data.categories.length ? (
-          data.categories.map((category) => (
+        {recordedCategories.length ? (
+          recordedCategories.map((category) => (
             <div className={`${shared.chartRow} ${styles.chartRow}`} key={category.categoryId}>
               <div>
                 <span>{category.name}</span>
@@ -45,7 +46,7 @@ export function MonthDashboard({ data, emoji }: { data: MonthSummary; emoji: str
             </div>
           ))
         ) : (
-          <p className={styles.help}>등록된 공부 종류가 없어요.</p>
+          <p className={styles.help}>이 달에 남긴 공부 기록이 없어요.</p>
         )}
       </section>
     </section>

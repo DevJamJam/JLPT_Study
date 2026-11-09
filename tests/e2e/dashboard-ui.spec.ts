@@ -9,6 +9,7 @@ const userId = id(1),
 const categories = [
   { id: categoryId, name: '단어' },
   { id: id(4), name: '관리자가 추가한 아주 긴 공부종류' },
+  { id: id(5), name: '청해' },
 ];
 const base: StudyRecord = {
   id: id(100),
@@ -125,6 +126,8 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await setup(page, rows);
   await expect(stats(page)).toContainText('17시간');
   await expect(stats(page)).toContainText('33개');
+  await expect(stats(page).getByRole('progressbar')).toHaveCount(2);
+  await expect(stats(page).getByText('청해', { exact: true })).toHaveCount(0);
   await expect(stats(page)).toContainText('2일');
   await expect(stats(page)).toContainText('8시간 30분');
   await expect(stats(page)).toContainText('15시간 30분');
@@ -141,9 +144,8 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await page.getByRole('button', { name: '이전 달', exact: true }).click();
   await expect(page).toHaveURL(/month=2026-09/);
   await expect(stats(page)).toContainText('0개');
-  await expect(
-    stats(page).getByRole('progressbar', { name: '단어 공부 시간', exact: true }),
-  ).toHaveAttribute('value', '0');
+  await expect(stats(page).getByRole('progressbar')).toHaveCount(0);
+  await expect(stats(page).getByText('이 달에 남긴 공부 기록이 없어요.')).toBeVisible();
   await expect(page.locator('article')).toHaveCount(0);
   await captureTop(page, `test-results/${info.project.name}-dashboard-empty.png`);
   await page.reload();
@@ -175,9 +177,8 @@ test('추가·수정·마지막 삭제는 카드·하루 합계·종류 막대�
     await expect(stats(page)).toContainText(`${count}개`);
   }
   await expect(stats(page)).toContainText('0일');
-  await expect(
-    stats(page).getByRole('progressbar', { name: '단어 공부 시간', exact: true }),
-  ).toHaveAttribute('value', '0');
+  await expect(stats(page).getByRole('progressbar')).toHaveCount(0);
+  await expect(stats(page).getByText('이 달에 남긴 공부 기록이 없어요.')).toBeVisible();
 });
 
 test('통계 갱신 실패는 이전 값 유지, 월 이동은 이전 값 숨김, 만료·계정 변경은 모든 이전 정보 숨김', async ({
