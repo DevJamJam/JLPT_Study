@@ -125,6 +125,23 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
     categoryName: n < 31 ? '단어' : categories[1].name,
   }));
   await setup(page, rows);
+  const summary = page.getByRole('region', { name: '월간 요약', exact: true });
+  await expect(summary.getByText('하루 평균 공부시간')).toBeVisible();
+  const summaryBox = (await summary.boundingBox())!;
+  const categoriesBox = (await categoryTimes(page).boundingBox())!;
+  if (info.project.name === 'SE3') {
+    expect(categoriesBox.x).toBeCloseTo(summaryBox.x, 0);
+    expect(categoriesBox.y).toBeGreaterThanOrEqual(summaryBox.y + summaryBox.height);
+  } else {
+    expect(categoriesBox.y).toBeCloseTo(summaryBox.y, 0);
+    expect(categoriesBox.x).toBeGreaterThanOrEqual(summaryBox.x + summaryBox.width);
+  }
+  const rowHeight = (region: ReturnType<typeof stats>) =>
+    region
+      .locator('dl > div')
+      .first()
+      .evaluate((row) => row.getBoundingClientRect().height);
+  expect(await rowHeight(summary)).toBe(await rowHeight(categoryTimes(page)));
   await expect(stats(page)).toContainText('17시간');
   await expect(stats(page)).toContainText('33개');
   await expect(categoryTimes(page).locator('dt')).toHaveText(['단어', categories[1].name]);
