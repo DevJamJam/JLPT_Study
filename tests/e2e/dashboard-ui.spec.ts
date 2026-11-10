@@ -157,6 +157,16 @@ test('월 전체33건 통계·0분 종류·페이지 추가·월 이동·빈 월
   await page.screenshot({ path: `test-results/${info.project.name}-dashboard-categories.png` });
   await page.getByRole('button', { name: '기록 더 보기', exact: true }).click();
   await expect(page.locator('article')).toHaveCount(33);
+  const main = await separatedShell(page);
+  await main.evaluate((element) => (element.scrollTop = element.scrollHeight));
+  const last = page.locator('article').last();
+  for (const name of ['수정', '삭제']) {
+    const button = last.getByRole('button', { name, exact: true });
+    await expect(button).toBeInViewport({ ratio: 1 });
+    await button.click({ trial: true });
+  }
+  await page.screenshot({ path: `test-results/${info.project.name}-dashboard-native-bottom.png` });
+
   await expect(stats(page)).toContainText('33개');
   await page.getByRole('button', { name: '이전 달', exact: true }).click();
   await expect(page).toHaveURL(/month=2026-09/);
