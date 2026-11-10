@@ -82,7 +82,6 @@
 }
 .nav {
   position: relative;
-  /* Keep the raised + icon below the main content. */
   margin: 12px auto 0;
   width: min(calc(100% - 32px - var(--shell-gutter, 0px)), var(--study-content-width));
   min-height: 74px;
@@ -114,24 +113,21 @@
 .icon {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
 }
 .icon svg {
   width: 22px;
   height: 22px;
 }
 .add .icon {
-  width: 44px;
-  height: 44px;
-  margin-top: -18px;
-  border-radius: 15px;
+  border-radius: 12px;
   background: var(--primary-strong);
   color: var(--surface);
 }
 .add .icon svg {
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
 }
 
 .navButton:disabled {
