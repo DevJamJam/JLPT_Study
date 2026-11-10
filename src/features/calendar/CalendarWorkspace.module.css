@@ -118,6 +118,23 @@
   overflow-wrap: anywhere;
 }
 
+.holidayCompact {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .holidayFull {
+    display: none;
+  }
+  .holidayCompact {
+    display: block;
+    white-space: nowrap;
+  }
+  .monthGrid > button {
+    padding-inline: 2px;
+  }
+}
+
 small.holidayName {
   line-height: 24px;
 }

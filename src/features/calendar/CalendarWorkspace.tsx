@@ -405,14 +405,22 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
             {dates.map((date) => {
               const day = ready ? calendar.data?.days.find((day) => day.date === date) : undefined;
               const people = day?.participants ?? [];
+              const holidayNames = holidays.names(date);
+              const holidayLabel = holidayNames.join(' · ');
+              const compactHolidayLabel =
+                holidayNames.length === 1 && Array.from(holidayLabel).length <= 3
+                  ? holidayLabel
+                  : holidayNames.every((name) => name.startsWith('대체공휴일'))
+                    ? '대체'
+                    : '공휴일';
               return (
                 <button
                   type="button"
                   key={date}
                   data-date={date}
                   disabled={!ready || date < '2000-01-01'}
-                  aria-label={`${date}${holidays.names(date).length ? ` ${holidays.names(date).join(' · ')}` : ''} 공부 기록 보기`}
-                  title={holidays.names(date).join(' · ') || undefined}
+                  aria-label={`${date}${holidayLabel ? ` ${holidayLabel}` : ''} 공부 기록 보기`}
+                  title={holidayLabel || undefined}
                   aria-current={date === today ? 'date' : undefined}
                   className={`${styles.day} ${!date.startsWith(route.month) ? styles.faded : ''} ${date === route.date ? extra.selected : ''}`}
                   onClick={() => openDate(date)}
@@ -422,8 +430,11 @@ function Calendar({ userId, groupId, emoji, nickname, ref }: Props) {
                   >
                     {Number(date.slice(-2))}
                   </span>
-                  {holidays.names(date).length > 0 && (
-                    <span className={extra.holidayName}>{holidays.names(date).join(' · ')}</span>
+                  {holidayLabel && (
+                    <span className={extra.holidayName} aria-hidden="true">
+                      <span className={extra.holidayFull}>{holidayLabel}</span>
+                      <span className={extra.holidayCompact}>{compactHolidayLabel}</span>
+                    </span>
                   )}
                   {route.view === 'group' ? (
                     <CalendarParticipants

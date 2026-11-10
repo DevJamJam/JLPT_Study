@@ -85,7 +85,10 @@ export function StudyShell({
                 onClick={() => (view === 'add' ? onAdd() : onNavigate(view))}
               >
                 <span className={styles.icon}>
-                  <Icon aria-hidden="true" />
+                  <Icon
+                    className={view === 'add' ? styles.recordIcon : undefined}
+                    aria-hidden="true"
+                  />
                 </span>
                 <span>{label}</span>
               </button>
