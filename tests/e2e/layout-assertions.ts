@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test';
 
-/** Assert painted regions, including the raised + icon, not just page overflow. */
+/** Assert painted regions, including the record icon, not just page overflow. */
 export async function separatedShell(page: Page) {
   const shell = page.getByTestId('study-shell');
   const geometry = await shell.evaluate((element) => {
@@ -8,10 +8,17 @@ export async function separatedShell(page: Page) {
     const main = element.querySelector(':scope > main')!.getBoundingClientRect();
     const footer = element.querySelector(':scope > footer')!.getBoundingClientRect();
     const nav = element.querySelector('nav')!;
+    const centers = (selector: string) =>
+      Array.from(nav.querySelectorAll(selector), (node) => {
+        const box = node.getBoundingClientRect();
+        return box.top + box.height / 2;
+      });
     const content = element
       .querySelector(':scope > main')!
       .firstElementChild!.getBoundingClientRect();
     return {
+      iconCenters: centers('button > span:first-child'),
+      labelCenters: centers('button > span:last-child'),
       headerBottom: header.bottom,
       mainTop: main.top,
       mainBottom: main.bottom,
@@ -36,6 +43,9 @@ export async function separatedShell(page: Page) {
   expect(geometry.documentHeight).toBeLessThanOrEqual(geometry.viewportHeight + 1);
   expect(geometry.bodyScroll).toBe(0);
   expect(Math.abs(geometry.contentCenter - geometry.viewportCenter)).toBeLessThanOrEqual(1);
+  for (const centers of [geometry.iconCenters, geometry.labelCenters]) {
+    expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(1);
+  }
   return shell.locator(':scope > main');
 }
 
