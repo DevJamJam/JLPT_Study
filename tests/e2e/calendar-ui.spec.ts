@@ -69,6 +69,7 @@ async function setup(page: Page, url = '/calendar', crowded: boolean | number = 
       '2026-10-03': ['개천절'],
       '2026-10-05': ['대체공휴일(개천절)'],
       '2026-10-09': ['한글날'],
+      '2026-10-12': ['테스트 공휴일'],
       '2026-01-01': ['1월1일'],
       '2025-12-25': ['기독탄신일'],
     };
@@ -513,6 +514,39 @@ test('공휴일은 토요일보다 우선하고 대체공휴일·주간·상세�
   await setup(page);
   const holiday = page.locator('[data-date="2026-10-03"]');
   await expect(holiday).toHaveAttribute('title', '개천절');
+  await expect(
+    holiday.getByText('개천절', { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
+  const substitute = page.getByRole('button', {
+    name: '2026-10-05 대체공휴일(개천절) 공부 기록 보기',
+  });
+  const compact = info.project.name === 'SE3';
+  await expect(
+    substitute
+      .getByText(compact ? '대체' : '대체공휴일(개천절)', { exact: true })
+      .filter({ visible: true }),
+  ).toBeVisible();
+  const long = page.locator('[data-date="2026-10-12"]');
+  const longLabel = long
+    .getByText(compact ? '공휴일' : '테스트 공휴일', { exact: true })
+    .filter({ visible: true });
+  await expect(longLabel).toBeVisible();
+  if (compact) {
+    const fits = await longLabel.evaluate((label) => {
+      const cell = label.closest('button')!.getBoundingClientRect();
+      return label.getBoundingClientRect().right <= cell.right - 2;
+    });
+    expect(fits).toBe(true);
+  }
+  await substitute.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: `test-results/${info.project.name}-compact-holidays.png` });
+  await substitute.click();
+  const substituteDialog = page.getByRole('dialog', { name: '2026-10-05 공부 기록', exact: true });
+  await expect(substituteDialog.getByLabel('공휴일', { exact: true })).toHaveText(
+    '대체공휴일(개천절)',
+  );
+  await page.getByRole('button', { name: '팝업 닫기' }).click();
+
   const color = (date: string) =>
     page
       .locator(`[data-date="${date}"] > span`)

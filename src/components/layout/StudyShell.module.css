@@ -120,6 +120,11 @@
   width: 22px;
   height: 22px;
 }
+.icon .recordIcon {
+  width: 26px;
+  height: 26px;
+}
+
 .navButton:disabled {
   opacity: 0.5;
   cursor: default;
