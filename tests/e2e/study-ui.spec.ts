@@ -96,19 +96,6 @@ async function setup(page: Page, url = '/study', memberCount = 15) {
 }
 const own = (page: Page) => page.locator(`[data-member-id="${user}"]`);
 
-test('짧은 본문에는 안내를 숨기고 화면 높이가 줄면 스크롤 안내를 표시한다', async ({ page }) => {
-  const original = page.viewportSize()!;
-  await setup(page, '/study', 1);
-  const guide = page.getByRole('button', { name: '본문 아래로 스크롤', exact: true });
-  await expect(guide).toHaveCount(0);
-  await page.setViewportSize({ width: original.width, height: 320 });
-  await expect(guide).toBeVisible();
-  await guide.click();
-  await expect(page.getByRole('button', { name: '본문 위로 스크롤', exact: true })).toBeEnabled();
-  await page.setViewportSize(original);
-  await expect(guide).toHaveCount(0);
-});
-
 test('가입순15명·0일 멤버·7칸 막대와 공통 메뉴를 연결한다', async ({ page }, info) => {
   await setup(page);
   await expect(page.getByRole('heading', { name: '우리의 스터디' })).toBeVisible();
@@ -143,18 +130,15 @@ test('본문 처음·중간·끝에서 메뉴와 겹치지 않고 마지막 카�
 }, info) => {
   await setup(page);
   const main = await separatedShell(page);
-  const down = page.getByRole('button', { name: '본문 아래로 스크롤', exact: true });
-  const up = page.getByRole('button', { name: '본문 위로 스크롤', exact: true });
-  const progress = page.getByRole('progressbar', { name: '본문 스크롤 위치' });
-  await expect(page.getByText('아래에 내용이 더 있어요', { exact: true })).toBeVisible();
-  await expect(up).toBeDisabled();
-  await expect(down).toBeEnabled();
-  await down.click();
+  await expect(page.getByText('아래에 내용이 더 있어요', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: '내 설정 열기' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(main).toBeFocused();
+  await page.keyboard.press('PageDown');
   await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
-  await expect(up).toBeEnabled();
-  // Keyboard activation must work without relying on an OS-visible scrollbar.
-  await up.press('Enter');
+  await page.keyboard.press('Home');
   await expect.poll(() => main.evaluate((element) => element.scrollTop)).toBe(0);
+  await main.evaluate((element) => element.blur());
   for (const [name, fraction] of [
     ['top', 0],
     ['middle', 0.5],
@@ -163,16 +147,12 @@ test('본문 처음·중간·끝에서 메뉴와 겹치지 않고 마지막 카�
     await main.evaluate((element, fraction) => {
       element.scrollTop = (element.scrollHeight - element.clientHeight) * fraction;
     }, fraction);
-    await expect(progress).toHaveAttribute('value', String(fraction * 100));
-    await expect(down).toBeVisible();
     await separatedShell(page);
     await page.screenshot({
       path: `test-results/${info.project.name}-study-layout-${name}.png`,
       fullPage: false,
     });
   }
-  await expect(down).toBeDisabled();
-  await expect(page.getByText('마지막 내용이에요', { exact: true })).toBeVisible();
   const last = page.locator('[data-member-id]').last();
   const visible = await last.evaluate((element) => {
     const card = element.getBoundingClientRect();
