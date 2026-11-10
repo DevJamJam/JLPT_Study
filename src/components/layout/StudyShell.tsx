@@ -78,7 +78,7 @@ export function StudyShell({
               <button
                 key={view}
                 type="button"
-                className={`${styles.navButton} ${view === 'add' ? styles.add : ''}`}
+                className={styles.navButton}
                 aria-current={view === active ? 'page' : undefined}
                 aria-label={view === 'add' ? addLabel : label}
                 disabled={view !== 'add' && disabledViews.includes(view)}

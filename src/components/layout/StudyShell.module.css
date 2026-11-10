@@ -120,16 +120,6 @@
   width: 22px;
   height: 22px;
 }
-.add .icon {
-  border-radius: 12px;
-  background: var(--primary-strong);
-  color: var(--surface);
-}
-.add .icon svg {
-  width: 36px;
-  height: 36px;
-}
-
 .navButton:disabled {
   opacity: 0.5;
   cursor: default;
